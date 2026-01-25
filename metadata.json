@@ -1,0 +1,5 @@
+{
+  "name": "Metro Mini",
+  "description": "A minimalist subway layout strategy game. Connect stations, manage lines, and keep the city moving without overcrowding.",
+  "requestFramePermissions": []
+}
