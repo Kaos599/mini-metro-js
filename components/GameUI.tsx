@@ -15,11 +15,14 @@ interface GameUIProps {
     isCreatingNewLine: boolean;
     newLineColorIndex: number | null;
     onCancelNewLine: () => void;
+    isPanMode: boolean;
+    onTogglePanMode: () => void;
 }
 
 export const GameUI: React.FC<GameUIProps> = ({ 
     gameState, speed, onReset, onUpgradeSelect, onSetSpeed, onSelectLine, onDragAssetStart, 
-    onStartNewLine, selectedLineId, isCreatingNewLine, newLineColorIndex, onCancelNewLine 
+    onStartNewLine, selectedLineId, isCreatingNewLine, newLineColorIndex, onCancelNewLine,
+    isPanMode, onTogglePanMode
 }) => {
     const progress = (gameState.time % CONFIG.WEEK_LENGTH) / CONFIG.WEEK_LENGTH;
     const weekDay = ['M', 'T', 'W', 'T', 'F', 'S', 'S'][Math.floor(progress * 7)];
@@ -69,6 +72,27 @@ export const GameUI: React.FC<GameUIProps> = ({
                     <AssetRow label="Lines" available={gameState.assets.lines - gameState.activeAssets.linesUsed} total={gameState.assets.lines} color="bg-red-500" />
                     <AssetRow label="Tunnels" available={gameState.assets.tunnels - gameState.activeAssets.tunnelsUsed} total={gameState.assets.tunnels} color="bg-slate-400" />
                 </div>
+                
+                {/* Pan Mode Toggle */}
+                <button
+                    onClick={onTogglePanMode}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+                        isPanMode 
+                            ? 'bg-blue-600 text-white shadow-lg' 
+                            : 'bg-white/90 text-slate-600 hover:bg-slate-100 border border-slate-200'
+                    }`}
+                    title="Toggle pan mode (drag to move around the map)"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <polyline points="5 9 2 12 5 15"></polyline>
+                        <polyline points="9 5 12 2 15 5"></polyline>
+                        <polyline points="15 19 12 22 9 19"></polyline>
+                        <polyline points="19 9 22 12 19 15"></polyline>
+                        <line x1="2" y1="12" x2="22" y2="12"></line>
+                        <line x1="12" y1="2" x2="12" y2="22"></line>
+                    </svg>
+                    <span className="text-xs uppercase tracking-wider">Pan</span>
+                </button>
             </div>
             
             {/* Bottom Tray */}

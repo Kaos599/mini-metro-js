@@ -7,7 +7,7 @@
 
 # testing
 /coverage
-
+/Memory-Bank
 # next.js
 /.next/
 /out/

@@ -1,7 +1,7 @@
 
 import { GameState, Station, Line, Train, InteractionState, Point } from '../types';
 import { COLORS, CONFIG } from '../constants';
-import { lerp } from '../utils/geometry';
+import { lerp, lineIntersectsPolygon } from '../utils/geometry';
 
 export class Renderer {
   ctx: CanvasRenderingContext2D;
@@ -54,7 +54,7 @@ export class Renderer {
       ctx.fill();
     });
 
-    // 2. Batch Draw Lines
+    // 2. Batch Draw Lines with tunnel visualization
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = CONFIG.LINE_WIDTH;
@@ -70,13 +70,36 @@ export class Renderer {
       }
 
       ctx.strokeStyle = line.color;
-      ctx.beginPath();
       const stations = line.stationIds.map(id => state.stations.find(s => s.id === id)).filter(Boolean) as Station[];
+      
       if (stations.length > 0) {
-          ctx.moveTo(stations[0].pos.x, stations[0].pos.y);
-          for (let i = 1; i < stations.length; i++) ctx.lineTo(stations[i].pos.x, stations[i].pos.y);
+          // Draw each segment, checking for water crossings (tunnels)
+          for (let i = 0; i < stations.length - 1; i++) {
+              const s1 = stations[i];
+              const s2 = stations[i + 1];
+              const isTunnel = state.water.some(poly => lineIntersectsPolygon(s1.pos, s2.pos, poly));
+              
+              ctx.beginPath();
+              ctx.moveTo(s1.pos.x, s1.pos.y);
+              ctx.lineTo(s2.pos.x, s2.pos.y);
+              
+              if (isTunnel) {
+                  // Tunnel segment: dotted line with slightly thinner stroke
+                  ctx.setLineDash([8, 6]);
+                  ctx.lineWidth = CONFIG.LINE_WIDTH - 1;
+                  ctx.stroke();
+                  ctx.setLineDash([]);
+                  ctx.lineWidth = CONFIG.LINE_WIDTH;
+                  
+                  // Draw tunnel entry/exit markers (small circles at stations)
+                  this.drawTunnelMarker(ctx, s1.pos, line.color);
+                  this.drawTunnelMarker(ctx, s2.pos, line.color);
+              } else {
+                  // Normal segment: solid line
+                  ctx.stroke();
+              }
+          }
       }
-      ctx.stroke();
     });
     ctx.globalAlpha = 1.0;
 
@@ -247,5 +270,20 @@ export class Renderer {
       else { ctx.arc(x, y, r, 0, Math.PI*2); } // fallback
       
       if (solid) ctx.fill(); else { ctx.fill(); ctx.stroke(); }
+  }
+  
+  private drawTunnelMarker(ctx: CanvasRenderingContext2D, pos: Point, color: string) {
+      // Draw a small tunnel indicator (arc/semi-circle) at tunnel entry/exit points
+      ctx.save();
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.6;
+      ctx.beginPath();
+      ctx.arc(pos.x, pos.y, CONFIG.STATION_RADIUS + 4, 0, Math.PI * 2);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
   }
 }

@@ -527,4 +527,25 @@ export class CoreSim {
   private checkWaterCrossing(p1: Point, p2: Point) { 
       return this.state.water.some(poly => lineIntersectsPolygon(p1, p2, poly)); 
   }
+  
+  // Public method to check tunnel requirements for a potential connection
+  public checkTunnelRequirements(stationId1: string, stationId2: string): { needed: number; available: number; canBuild: boolean } {
+      const s1 = this.getStation(stationId1);
+      const s2 = this.getStation(stationId2);
+      const available = this.state.assets.tunnels - this.state.activeAssets.tunnelsUsed;
+      
+      if (!s1 || !s2) return { needed: 0, available, canBuild: true };
+      
+      const needed = this.checkWaterCrossing(s1.pos, s2.pos) ? 1 : 0;
+      return { needed, available, canBuild: needed <= available };
+  }
+  
+  // Public method to check tunnel requirements for extending a line
+  public checkExtendTunnelRequirements(lineId: string, newStationId: string, addToHead: boolean): { needed: number; available: number; canBuild: boolean } {
+      const line = this.state.lines.find(l => l.id === lineId);
+      if (!line) return { needed: 0, available: this.state.assets.tunnels - this.state.activeAssets.tunnelsUsed, canBuild: true };
+      
+      const currentEndId = addToHead ? line.stationIds[0] : line.stationIds[line.stationIds.length - 1];
+      return this.checkTunnelRequirements(currentEndId, newStationId);
+  }
 }

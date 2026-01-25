@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { CoreSim } from './engine/CoreSim';
 import { Renderer } from './engine/Renderer';
 import { GameUI } from './components/GameUI';
+import { AnimatedBackground } from './components/AnimatedBackground';
 import { GameMode, Point, InteractionState, AssetType, GamePhase, MapComplexityConfig, TerrainStyle, DifficultyPreset } from './types';
 import { dist, distToSegment } from './utils/geometry';
 import { CONFIG, COLORS, DIFFICULTY_PRESETS, DEFAULT_COMPLEXITY_CONFIG } from './constants';
@@ -32,6 +33,13 @@ const App: React.FC = () => {
   const [camera, setCamera] = useState({ x: 0, y: 0, zoom: 1 });
   const isPanningRef = useRef(false);
   const lastPanPosRef = useRef<Point | null>(null);
+  const [isPanMode, setIsPanMode] = useState(false);
+  
+  // Map bounds for zoom limits
+  const mapBoundsRef = useRef({ minX: 0, maxX: window.innerWidth, minY: 0, maxY: window.innerHeight });
+  
+  // Tunnel warning modal
+  const [tunnelWarning, setTunnelWarning] = useState<{ show: boolean; needed: number; available: number }>({ show: false, needed: 0, available: 0 });
   
   // Setup config state
   const [setupConfig, setSetupConfig] = useState<MapComplexityConfig>({
@@ -67,15 +75,56 @@ const App: React.FC = () => {
       setIsCreatingNewLine(false);
       setNewLineColorIndex(null);
       setSelectedLineId(null);
+      setIsPanMode(false);
+      setTunnelWarning({ show: false, needed: 0, available: 0 });
       lastTimeRef.current = performance.now();
       accumulatorRef.current = 0;
       prevScoreRef.current = 0;
+      
+      // Initialize map bounds from water and initial stations
+      updateMapBounds();
       
       if (engineRef.current) {
         engineRef.current.state.camera = { x: 0, y: 0, zoom: 1 };
         setUiState({...engineRef.current.state});
       }
       playSound('spawn');
+  };
+  
+  // Calculate and update map bounds based on stations and water
+  const updateMapBounds = () => {
+      if (!engineRef.current) return;
+      const state = engineRef.current.state;
+      
+      let minX = Infinity, maxX = -Infinity;
+      let minY = Infinity, maxY = -Infinity;
+      
+      // Include all stations
+      state.stations.forEach(s => {
+          minX = Math.min(minX, s.pos.x);
+          maxX = Math.max(maxX, s.pos.x);
+          minY = Math.min(minY, s.pos.y);
+          maxY = Math.max(maxY, s.pos.y);
+      });
+      
+      // Include water polygons
+      state.water.forEach(poly => {
+          poly.forEach(p => {
+              minX = Math.min(minX, p.x);
+              maxX = Math.max(maxX, p.x);
+              minY = Math.min(minY, p.y);
+              maxY = Math.max(maxY, p.y);
+          });
+      });
+      
+      // Default to screen size if no content
+      if (minX === Infinity) {
+          minX = 0; maxX = window.innerWidth;
+          minY = 0; maxY = window.innerHeight;
+      }
+      
+      // Add padding
+      mapBoundsRef.current = { minX: minX - 50, maxX: maxX + 50, minY: minY - 50, maxY: maxY + 50 };
   };
 
   const animate = (time: number) => {
@@ -100,6 +149,11 @@ const App: React.FC = () => {
       while (accumulatorRef.current >= FIXED_TIMESTEP) {
           engine.tick();
           accumulatorRef.current -= FIXED_TIMESTEP;
+      }
+      
+      // Update map bounds periodically (every ~1 second)
+      if (engine.state.time % 30 === 0) {
+          updateMapBounds();
       }
 
       // Interpolation
@@ -189,12 +243,21 @@ const App: React.FC = () => {
       return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
-  // Handle mouse wheel for zoom
+  // Handle mouse wheel for zoom with map bounds clamping
   const handleWheel = (e: React.WheelEvent) => {
       e.preventDefault();
       const zoomSpeed = 0.001;
       const delta = -e.deltaY * zoomSpeed;
-      const newZoom = Math.max(CONFIG.MIN_ZOOM, Math.min(CONFIG.MAX_ZOOM, camera.zoom * (1 + delta)));
+      
+      // Calculate min zoom to show entire map
+      const bounds = mapBoundsRef.current;
+      const mapWidth = bounds.maxX - bounds.minX + 200; // Add padding
+      const mapHeight = bounds.maxY - bounds.minY + 200;
+      const minZoomX = window.innerWidth / mapWidth;
+      const minZoomY = window.innerHeight / mapHeight;
+      const dynamicMinZoom = Math.max(0.3, Math.min(minZoomX, minZoomY));
+      
+      const newZoom = Math.max(dynamicMinZoom, Math.min(CONFIG.MAX_ZOOM, camera.zoom * (1 + delta)));
       
       // Zoom towards cursor position
       const rect = canvasRef.current?.getBoundingClientRect();
@@ -207,8 +270,15 @@ const App: React.FC = () => {
       const worldX = (mouseX / camera.zoom) + camera.x;
       const worldY = (mouseY / camera.zoom) + camera.y;
       
-      const newCameraX = worldX - (mouseX / newZoom);
-      const newCameraY = worldY - (mouseY / newZoom);
+      let newCameraX = worldX - (mouseX / newZoom);
+      let newCameraY = worldY - (mouseY / newZoom);
+      
+      // Clamp camera to map bounds
+      const viewWidth = window.innerWidth / newZoom;
+      const viewHeight = window.innerHeight / newZoom;
+      
+      newCameraX = Math.max(bounds.minX - 100, Math.min(bounds.maxX - viewWidth + 100, newCameraX));
+      newCameraY = Math.max(bounds.minY - 100, Math.min(bounds.maxY - viewHeight + 100, newCameraY));
       
       setCamera({ x: newCameraX, y: newCameraY, zoom: newZoom });
   };
@@ -223,12 +293,26 @@ const App: React.FC = () => {
       const screenPos = getScreenMousePos(e);
       const engine = engineRef.current;
 
-      // Middle click or shift+click for panning
-      if (isMiddleClick || isShiftClick) {
-          e.preventDefault();
-          isPanningRef.current = true;
-          lastPanPosRef.current = screenPos;
-          return;
+      // Middle click, shift+click, or pan mode for panning
+      if (isMiddleClick || isShiftClick || isPanMode) {
+          // In pan mode, we need to check if clicking on empty space
+          if (isPanMode) {
+              const station = engine.state.stations.find(s => dist(s.pos, pos) < CONFIG.STATION_RADIUS * 2);
+              if (station) {
+                  // Still allow station interaction in pan mode
+                  // Fall through to normal handling
+              } else {
+                  e.preventDefault();
+                  isPanningRef.current = true;
+                  lastPanPosRef.current = screenPos;
+                  return;
+              }
+          } else {
+              e.preventDefault();
+              isPanningRef.current = true;
+              lastPanPosRef.current = screenPos;
+              return;
+          }
       }
 
       if (isRightClick) {
@@ -289,11 +373,23 @@ const App: React.FC = () => {
       
       const screenPos = getScreenMousePos(e);
       
-      // Handle panning
+      // Handle panning with bounds clamping
       if (isPanningRef.current && lastPanPosRef.current) {
           const dx = (screenPos.x - lastPanPosRef.current.x) / camera.zoom;
           const dy = (screenPos.y - lastPanPosRef.current.y) / camera.zoom;
-          setCamera(prev => ({ ...prev, x: prev.x - dx, y: prev.y - dy }));
+          
+          const bounds = mapBoundsRef.current;
+          const viewWidth = window.innerWidth / camera.zoom;
+          const viewHeight = window.innerHeight / camera.zoom;
+          
+          let newX = camera.x - dx;
+          let newY = camera.y - dy;
+          
+          // Clamp to map bounds
+          newX = Math.max(bounds.minX - 100, Math.min(bounds.maxX - viewWidth + 100, newX));
+          newY = Math.max(bounds.minY - 100, Math.min(bounds.maxY - viewHeight + 100, newY));
+          
+          setCamera(prev => ({ ...prev, x: newX, y: newY }));
           lastPanPosRef.current = screenPos;
           return;
       }
@@ -377,22 +473,37 @@ const App: React.FC = () => {
                   if (line) {
                       const isHead = line.stationIds[0] === dragStartStationId;
                       const isTail = line.stationIds[line.stationIds.length - 1] === dragStartStationId;
-                      if (isHead) success = engine.extendLine(activeLineId, hoverStationId, true);
-                      else if (isTail) success = engine.extendLine(activeLineId, hoverStationId, false);
+                      
+                      // Check tunnel requirements before extending
+                      const tunnelCheck = engine.checkExtendTunnelRequirements(activeLineId, hoverStationId, isHead);
+                      if (!tunnelCheck.canBuild) {
+                          setTunnelWarning({ show: true, needed: tunnelCheck.needed, available: tunnelCheck.available });
+                          playSound('warning');
+                      } else {
+                          if (isHead) success = engine.extendLine(activeLineId, hoverStationId, true);
+                          else if (isTail) success = engine.extendLine(activeLineId, hoverStationId, false);
+                      }
                   }
               } else {
-                  // Creating a NEW line - either from new line mode or normal drag
-                  const colorIdx = isCreatingNewLine && newLineColorIndex !== null 
-                      ? newLineColorIndex 
-                      : engine.state.lines.length;
-                  const newId = engine.createLine([dragStartStationId, hoverStationId], colorIdx);
-                  if (newId) { 
-                      success = true; 
-                      setSelectedLineId(newId);
-                      // Exit new line creation mode after successful creation
-                      if (isCreatingNewLine) {
-                          setIsCreatingNewLine(false);
-                          setNewLineColorIndex(null);
+                  // Creating a NEW line - check tunnel requirements first
+                  const tunnelCheck = engine.checkTunnelRequirements(dragStartStationId, hoverStationId);
+                  if (!tunnelCheck.canBuild) {
+                      setTunnelWarning({ show: true, needed: tunnelCheck.needed, available: tunnelCheck.available });
+                      playSound('warning');
+                  } else {
+                      // Creating a NEW line - either from new line mode or normal drag
+                      const colorIdx = isCreatingNewLine && newLineColorIndex !== null 
+                          ? newLineColorIndex 
+                          : engine.state.lines.length;
+                      const newId = engine.createLine([dragStartStationId, hoverStationId], colorIdx);
+                      if (newId) { 
+                          success = true; 
+                          setSelectedLineId(newId);
+                          // Exit new line creation mode after successful creation
+                          if (isCreatingNewLine) {
+                              setIsCreatingNewLine(false);
+                              setNewLineColorIndex(null);
+                          }
                       }
                   }
               }
@@ -442,7 +553,8 @@ const App: React.FC = () => {
   // Determine cursor style
   const getCursorStyle = () => {
       if (interactionRef.current.draggingAssetType) return 'cursor-grabbing';
-      if (isPanningRef.current) return 'cursor-move';
+      if (isPanningRef.current) return 'cursor-grabbing';
+      if (isPanMode) return 'cursor-grab';
       if (isCreatingNewLine) return 'cursor-crosshair';
       return 'cursor-default';
   };
@@ -452,8 +564,16 @@ const App: React.FC = () => {
       {/* Setup Screen */}
       {gamePhase === 'setup' && (
          <div className="absolute inset-0 z-50 bg-[#fcf9f2] flex flex-col items-center justify-center p-4 overflow-auto">
-            <h1 className="text-7xl font-black tracking-tighter text-slate-800 mb-2">METRO MINI</h1>
-            <p className="text-slate-500 mb-8 font-bold uppercase tracking-widest">High Performance Sim</p>
+            {/* Animated Background */}
+            <AnimatedBackground width={window.innerWidth} height={window.innerHeight} />
+            
+            {/* Content overlay */}
+            <div className="relative z-10 flex flex-col items-center">
+            <h1 className="text-7xl font-black tracking-tighter text-slate-800 mb-2">Mini Metro JS</h1>
+            <p className="text-slate-500 mb-2 font-medium text-center max-w-md">
+              A web-based re-implementation of the beloved puzzle strategy game
+            </p>
+            <p className="text-slate-400 mb-8 text-sm italic">Inspired by Dinosaur Polo Club's Mini Metro</p>
             
             {/* Difficulty Presets */}
             <div className="mb-6">
@@ -528,8 +648,9 @@ const App: React.FC = () => {
             {/* Controls hint */}
             <div className="mt-8 text-sm text-slate-400 text-center">
               <p><strong>Controls:</strong> Drag between stations to create lines</p>
-              <p>Scroll to zoom • Middle-click or Shift+drag to pan</p>
+              <p>Scroll to zoom • Click and drag on empty space to pan</p>
               <p>Right-click to delete lines</p>
+            </div>
             </div>
          </div>
       )}
@@ -566,7 +687,31 @@ const App: React.FC = () => {
             isCreatingNewLine={isCreatingNewLine}
             newLineColorIndex={newLineColorIndex}
             onCancelNewLine={handleCancelNewLine}
+            isPanMode={isPanMode}
+            onTogglePanMode={() => setIsPanMode(prev => !prev)}
           />
+      )}
+      
+      {/* Tunnel Warning Modal */}
+      {tunnelWarning.show && (
+        <div className="absolute inset-0 bg-slate-900/40 flex items-center justify-center pointer-events-auto backdrop-blur-sm z-50">
+          <div className="bg-white p-8 rounded-xl shadow-2xl text-center max-w-md animate-in fade-in zoom-in duration-200">
+            <div className="text-5xl mb-4">🚇</div>
+            <h2 className="text-2xl font-black mb-2 text-slate-800">Tunnels Required</h2>
+            <p className="text-slate-600 mb-4">
+              This connection crosses water and requires <span className="font-bold text-red-600">{tunnelWarning.needed}</span> tunnel{tunnelWarning.needed > 1 ? 's' : ''}.
+            </p>
+            <p className="text-slate-500 mb-6">
+              You have <span className="font-bold">{tunnelWarning.available}</span> tunnel{tunnelWarning.available !== 1 ? 's' : ''} available.
+            </p>
+            <button 
+              onClick={() => setTunnelWarning({ show: false, needed: 0, available: 0 })}
+              className="bg-slate-800 text-white px-6 py-3 rounded-full font-bold hover:bg-slate-700 transition-all"
+            >
+              Got it
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
