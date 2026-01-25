@@ -44,3 +44,15 @@ export const isPointInPolygon = (p: Point, polygon: Point[]): boolean => {
   }
   return inside;
 };
+
+export const distToSegment = (p: Point, v: Point, w: Point): number => {
+  const l2 = dist(v, w) * dist(v, w);
+  if (l2 === 0) return dist(p, v);
+  let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+  t = Math.max(0, Math.min(1, t));
+  const projection = {
+      x: v.x + t * (w.x - v.x),
+      y: v.y + t * (w.y - v.y)
+  };
+  return dist(p, projection);
+};
