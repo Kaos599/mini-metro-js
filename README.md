@@ -28,7 +28,7 @@
 
 **Metro Mini** is a faithful re-implementation of the critically acclaimed minimalist subway strategy game, **Mini Metro**. Built from scratch using **TypeScript**, **React 19**, and **HTML5 Canvas**, this project brings the addictive transit-building experience to your browser with high-performance 60fps pathfinding and rendering.
 
-The goal is to recreate the elegant simplicity of the original game—designing efficient subway networks for a rapidly growing city. As stations pop up, you must redraw your lines, manage locomotives, and deploy resources like tunnels and carriages to keep the city moving.
+The goal is to recreate the elegant simplicity of the original game designing efficient subway networks for a rapidly growing city. As stations pop up, you must redraw your lines, manage locomotives, and deploy resources like tunnels and carriages to keep the city moving.
 
 ## ✨ Features
 
@@ -36,7 +36,7 @@ The goal is to recreate the elegant simplicity of the original game—designing 
 - **Draw-to-Connect Gameplay**: Intuitively create and modify metro lines just like in the original game.
 - **Procedural City Growth**: Dynamic station spawning ensures every session presents a new logistical challenge.
 - **Shape-Based Routing**: Passengers find their own way through your network based on their destination shape.
-- **Weekly Upgrades**: Survive the week to choose between vital assets—new lines, locomotives, carriages, or tunnels.
+- **Weekly Upgrades**: Survive the week to choose between vital assets new lines, locomotives, carriages, or tunnels.
 
 ### 🎮 Game Modes
 | Mode | Description |
