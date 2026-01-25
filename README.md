@@ -3,8 +3,7 @@
 
 # 🚇 Mini Metro in JS!
 
-
-**A minimalist subway layout strategy game.**
+**A fan-made tribute and minimalist subway strategy game inspired by the original Mini Metro.**
 
 [![React](https://img.shields.io/badge/React-19.2.3-61DAFB?logo=react&logoColor=black)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.2-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -25,45 +24,41 @@
 
 ## 📖 About
 
-**Metro Mini** is a strategy simulation game where you design the subway map for a rapidly growing city. Draw lines between stations and start your trains running. As new stations open, redraw your lines to keep them efficient. Decide where to use your limited resources. How long can you keep the city moving?
+**Metro Mini** is a faithful re-implementation of the critically acclaimed minimalist subway strategy game, **Mini Metro**. Built from scratch using **TypeScript**, **React 19**, and **HTML5 Canvas**, this project brings the addictive transit-building experience to your browser with high-performance 60fps pathfinding and rendering.
 
-Built entirely with **React** and **HTML5 Canvas**, this project demonstrates a high-performance game loop within a modern web framework, featuring custom pathfinding, procedural generation, and responsive touch controls.
+The goal is to recreate the elegant simplicity of the original game—designing efficient subway networks for a rapidly growing city. As stations pop up, you must redraw your lines, manage locomotives, and deploy resources like tunnels and carriages to keep the city moving.
 
 ## ✨ Features
+
+### 🚇 Authentic Mini Metro Experience
+- **Draw-to-Connect Gameplay**: Intuitively create and modify metro lines just like in the original game.
+- **Procedural City Growth**: Dynamic station spawning ensures every session presents a new logistical challenge.
+- **Shape-Based Routing**: Passengers find their own way through your network based on their destination shape.
+- **Weekly Upgrades**: Survive the week to choose between vital assets—new lines, locomotives, carriages, or tunnels.
 
 ### 🎮 Game Modes
 | Mode | Description |
 | :--- | :--- |
-| **Normal** | The classic experience. Redraw lines freely, manage overcrowding, and last as long as possible. |
-| **Extreme** | Hardcore challenge. Lines are permanent once drawn. Plan ahead! |
-| **Endless** | Zen mode. No overcrowding, just build and optimize your network in peace. |
+| **Normal** | The classic Mini Metro experience. Balance efficiency and overcrowding. |
+| **Extreme** | Once a line is placed, it's permanent. True strategic planning. |
+| **Endless** | A zen-like sandbox mode. Build your dream network without the risk of game over. |
 
-### 🛠 Mechanics
-- **Dynamic Network**: Drag and drop to create lines. Extend them, reroute them, or tear them down (in Normal mode).
-- **Procedural Growth**: Stations spawn randomly with increasing frequency. No two games are alike.
-- **Passenger Routing**: Autonomous passengers find the best route to their destination shape.
-- **Resource Management**: Weekly upgrades grant you new locomotives, lines, tunnels, or carriages.
-- **Water Obstacles**: Rivers require tunnels to cross. Manage your tunnel inventory wisely.
-- **Visual Feedback**: Real-time overcrowding indicators and animated passenger flows.
-
-### 💻 Tech Stack
-- **Core**: React 19 (Hooks for UI, Refs for Game Loop)
-- **Language**: TypeScript (Strict typing for game logic)
-- **Rendering**: HTML5 Canvas API (Optimized for 60fps)
-- **Build**: Vite (Fast HMR and bundling)
-- **Styling**: Tailwind CSS (Minimalist UI overlays)
+### 🛠 Technical Highlights
+- **60FPS Canvas Engine**: Optimized rendering loop for smooth train movement and UI interactions.
+- **React 19 & TypeScript**: A modern codebase showcasing how to build complex simulations in a web environment.
+- **Touch-First Design**: Fully responsive and playable on mobile devices with intuitive touch controls.
 
 ## 🕹 How to Play
 
-1.  **Draw Lines**: Click/Touch and drag from a station to another to create a line.
-2.  **Extend**: Drag from the end of a line to a new station to extend it.
-3.  **Transport**: Trains will automatically start running. They pick up passengers and drop them off at stations matching their shape.
-4.  **Manage**: Keep stations from overcrowding! If a station stays full for too long, the network fails.
-5.  **Upgrade**: Every week (in-game time), choose a new asset to help your network grow.
+1.  **Connect Stations**: Click or touch and drag between geometric stations (Circle, Triangle, Square) to create a metro line.
+2.  **Assign Trains**: Locomotives automatically run on your lines to transport passengers.
+3.  **Optimize Routes**: Drag line ends to extend your network or rewire existing paths as the city expands.
+4.  **Manage Overcrowding**: Keep an eye on the red indicators! If a station stays overcrowded for too long, the network fails.
+5.  **Upgrade**: Every Sunday, choose a new asset to help your network keep up with the city's growth.
 
 ## 🚀 Installation
 
-Clone the repository and install dependencies to run the game locally.
+Run this Mini Metro re-implementation locally:
 
 ```bash
 # Clone the repository
@@ -79,15 +74,14 @@ npm install
 npm run dev
 ```
 
-Open `http://localhost:3000` in your browser to play.
+Open `http://localhost:3000` in your browser to start building.
 
 ## 🗺 Roadmap
 
-- [ ] **Creative Mode**: Sandbox environment with unlimited resources.
-- [ ] **Interchange Stations**: Large stations with faster loading times.
-- [ ] **Sound Effects**: Audio feedback for actions and game events.
-- [ ] **Camera Controls**: Zoom and pan support for larger maps.
-- [ ] **Local Storage**: Save high scores and ongoing games.
+- [ ] **Global Leaderboards**: Compare your scores with players worldwide.
+- [ ] **City Presets**: Play on maps inspired by real-world cities like London and Paris.
+- [ ] **Advanced Upgrades**: Interchange stations and multi-track support.
+- [ ] **Soundscape**: Minimalist ambient audio to match the original game's atmosphere.
 
 ## 📄 License
 
@@ -96,6 +90,8 @@ Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 ---
 
 <div align="center">
+
+*Disclaimer: This is a non-commercial fan project and a technical re-implementation. All credits for the original game concept and design go to Dinosaur Polo Club.*
 
 Made with ❤️ and TypeScript
 
