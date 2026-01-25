@@ -3,27 +3,35 @@ import { CoreSim } from './engine/CoreSim';
 import { Renderer } from './engine/Renderer';
 import { GameUI } from './components/GameUI';
 import { GameMode, Point, InteractionState, AssetType } from './types';
-import { dist } from './utils/geometry';
+import { dist, distToSegment } from './utils/geometry';
 import { CONFIG } from './constants';
+import { playSound } from './utils/audio';
 
 const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<CoreSim | null>(null);
   const rendererRef = useRef<Renderer | null>(null);
-  const animationFrameRef = useRef<number>(0);
+  const requestRef = useRef<number>(0);
   
-  // React State for UI updates (updated less frequently than 60hz ideally)
-  const [uiState, setUiState] = useState<any>(null);
-  const [mode, setMode] = useState<GameMode>(GameMode.NORMAL);
-  const [menuOpen, setMenuOpen] = useState(true);
+  // Game Loop State
+  const accumulatorRef = useRef(0);
+  const lastTimeRef = useRef(0);
+  const FIXED_TIMESTEP = 1000 / 30; // 30 ticks per second (33ms)
 
-  // Interaction State
+  const [uiState, setUiState] = useState<any>(null);
+  const [menuOpen, setMenuOpen] = useState(true);
+  const [speed, setSpeed] = useState(1);
+  const [selectedLineId, setSelectedLineId] = useState<string | null>(null);
+
+  const prevScoreRef = useRef(0);
   const interactionRef = useRef<InteractionState>({
       isDragging: false,
       dragStartStationId: null,
       dragCurrentPos: null,
       activeLineId: null,
-      hoverStationId: null
+      hoverStationId: null,
+      selectedLineId: null,
+      draggingAssetType: null
   });
 
   const initGame = (selectedMode: GameMode) => {
@@ -33,166 +41,237 @@ const App: React.FC = () => {
       if (canvasRef.current) {
           rendererRef.current = new Renderer(canvasRef.current.getContext('2d')!, width, height);
       }
-      setMode(selectedMode);
       setMenuOpen(false);
+      setSpeed(1);
+      lastTimeRef.current = performance.now();
+      accumulatorRef.current = 0;
+      prevScoreRef.current = 0;
       
-      // Update UI state immediately
       if (engineRef.current) setUiState({...engineRef.current.state});
+      playSound('spawn');
   };
 
-  const loop = useCallback(() => {
+  const animate = (time: number) => {
       if (!engineRef.current || !rendererRef.current) return;
-      
       const engine = engineRef.current;
-      
-      // Update logic
-      engine.update(1); // 1 tick
-      
+
+      const deltaTime = time - lastTimeRef.current;
+      lastTimeRef.current = time;
+
+      // SPEED FIX: Scale accumulator addition, but clamp based on MAX theoretical frames we want to process.
+      // At 20x speed, we want 20x simulation speed.
+      // FIXED_TIMESTEP is 33ms. 
+      // If speed is 20, we add deltaTime * 20.
+      accumulatorRef.current += deltaTime * speed;
+
+      // Dynamic safety clamp: Allow enough buffer for high speed without spiraling
+      // Max 10 ticks per frame approx (330ms simulation time)
+      const maxAccumulation = Math.max(250, FIXED_TIMESTEP * 10 * Math.max(1, speed * 0.5)); 
+      if (accumulatorRef.current > maxAccumulation) accumulatorRef.current = maxAccumulation;
+
+      // Consume accumulator
+      while (accumulatorRef.current >= FIXED_TIMESTEP) {
+          engine.tick();
+          accumulatorRef.current -= FIXED_TIMESTEP;
+      }
+
+      // Interpolation
+      const alpha = accumulatorRef.current / FIXED_TIMESTEP;
+
       // Render
-      rendererRef.current.render(engine.state, interactionRef.current);
-      
-      // Sync React UI State (throttled or every frame? Every frame is fine for simple HUD)
-      // Check for major state changes to update React
-      if (engine.state.isGameOver || engine.state.pendingUpgrade || engine.state.time % 60 === 0) {
+      interactionRef.current.selectedLineId = selectedLineId;
+      rendererRef.current.render(engine.state, interactionRef.current, alpha);
+
+      // Audio & UI Sync
+      if (engine.state.score > prevScoreRef.current) {
+          playSound('deliver');
+          prevScoreRef.current = engine.state.score;
+      }
+      if (engine.state.isGameOver && speed > 0) {
+           setSpeed(0);
+           playSound('gameover');
+      }
+      // Throttled React State Update
+      if (engine.state.isGameOver || engine.state.pendingUpgrade || engine.state.time % 30 === 0) {
           setUiState({...engine.state});
       }
 
-      animationFrameRef.current = requestAnimationFrame(loop);
-  }, []);
+      requestRef.current = requestAnimationFrame(animate);
+  };
 
   useEffect(() => {
       if (!menuOpen) {
-          animationFrameRef.current = requestAnimationFrame(loop);
+          lastTimeRef.current = performance.now();
+          requestRef.current = requestAnimationFrame(animate);
       }
-      return () => cancelAnimationFrame(animationFrameRef.current);
-  }, [loop, menuOpen]);
+      return () => cancelAnimationFrame(requestRef.current);
+  }, [menuOpen, speed]);
 
-  // Input Handling
+  // --- Input Handlers ---
   const getMousePos = (e: React.MouseEvent | React.TouchEvent): Point => {
       const canvas = canvasRef.current;
       if (!canvas) return { x: 0, y: 0 };
       const rect = canvas.getBoundingClientRect();
-      const clientX = 'touches' in e ? e.touches[0].clientX : (e as React.MouseEvent).clientX;
-      const clientY = 'touches' in e ? e.touches[0].clientY : (e as React.MouseEvent).clientY;
-      return {
-          x: clientX - rect.left,
-          y: clientY - rect.top
-      };
+      const clientX = 'touches' in e ? (e as any).touches[0].clientX : (e as React.MouseEvent).clientX;
+      const clientY = 'touches' in e ? (e as any).touches[0].clientY : (e as React.MouseEvent).clientY;
+      return { x: clientX - rect.left, y: clientY - rect.top };
   };
 
   const handlePointerDown = (e: React.MouseEvent | React.TouchEvent) => {
       if (!engineRef.current || menuOpen) return;
+      
+      const isRightClick = 'button' in e && e.button === 2;
       const pos = getMousePos(e);
       const engine = engineRef.current;
 
-      // Find station under cursor
+      if (isRightClick) {
+          e.preventDefault();
+          const deleted = engine.deleteLineAt(pos);
+          if (deleted) playSound('warning');
+          return;
+      }
+
       const station = engine.state.stations.find(s => dist(s.pos, pos) < CONFIG.STATION_RADIUS * 2);
-      
       if (station) {
+          // STRICT EDITING: If a line is selected, we only allow dragging endpoints of THAT line.
+          if (selectedLineId) {
+             const l = engine.state.lines.find(line => line.id === selectedLineId);
+             const isEndpoint = l && (l.stationIds[0] === station.id || l.stationIds[l.stationIds.length-1] === station.id);
+             
+             if (isEndpoint) {
+                 interactionRef.current.isDragging = true;
+                 interactionRef.current.dragStartStationId = station.id;
+                 interactionRef.current.dragCurrentPos = pos;
+                 interactionRef.current.activeLineId = selectedLineId;
+             }
+             // If not an endpoint of selected line, ignore interaction.
+             return;
+          }
+
+          // Normal Logic (No specific line selected)
           interactionRef.current.isDragging = true;
           interactionRef.current.dragStartStationId = station.id;
           interactionRef.current.dragCurrentPos = pos;
           
-          // Check if this station is an END or START of an existing line to extend it
-          // Logic: If station is endpoint of line X, make line X active.
-          // Prioritize lines where this station is an endpoint.
-          const existingLine = engine.state.lines.find(l => 
-              l.stationIds[0] === station.id || l.stationIds[l.stationIds.length - 1] === station.id
+          const existingLine = engine.state.lines.find(line => 
+            line.stationIds[0] === station.id || line.stationIds[line.stationIds.length - 1] === station.id
           );
-          
-          if (existingLine) {
-              interactionRef.current.activeLineId = existingLine.id;
-          } else {
-              interactionRef.current.activeLineId = null;
-          }
-      } else {
-          // Maybe remove line? (Right click or specialized input)
-          // For MVP, simplistic line creation only.
+          interactionRef.current.activeLineId = existingLine ? existingLine.id : null;
       }
   };
 
   const handlePointerMove = (e: React.MouseEvent | React.TouchEvent) => {
       if (!engineRef.current || menuOpen) return;
       const pos = getMousePos(e);
-      const engine = engineRef.current;
-      
+      interactionRef.current.dragCurrentPos = pos;
+
       if (interactionRef.current.isDragging) {
-          interactionRef.current.dragCurrentPos = pos;
-          // Snap to station
-          const hoverStation = engine.state.stations.find(s => dist(s.pos, pos) < CONFIG.STATION_RADIUS * 2.5);
-          if (hoverStation) {
-               interactionRef.current.hoverStationId = hoverStation.id;
-               interactionRef.current.dragCurrentPos = hoverStation.pos;
-          } else {
-              interactionRef.current.hoverStationId = null;
-          }
+          const hoverStation = engineRef.current.state.stations.find(s => dist(s.pos, pos) < CONFIG.STATION_RADIUS * 2.5);
+          interactionRef.current.hoverStationId = hoverStation ? hoverStation.id : null;
+          if (hoverStation) interactionRef.current.dragCurrentPos = hoverStation.pos;
       }
   };
 
   const handlePointerUp = (e: React.MouseEvent | React.TouchEvent) => {
-      if (!engineRef.current || !interactionRef.current.isDragging) return;
-      
+      if (!engineRef.current) return;
       const engine = engineRef.current;
-      const startId = interactionRef.current.dragStartStationId;
-      const endId = interactionRef.current.hoverStationId;
-      const activeLineId = interactionRef.current.activeLineId;
+      const pos = getMousePos(e);
 
-      if (startId && endId && startId !== endId) {
-          // Attempt to connect
-          if (activeLineId) {
-              // Extend existing
-              const line = engine.state.lines.find(l => l.id === activeLineId);
-              if (line) {
-                  // Determine if we are extending head or tail
-                  const isHead = line.stationIds[0] === startId;
-                  const isTail = line.stationIds[line.stationIds.length - 1] === startId;
-                  
-                  if (isHead) engine.extendLine(activeLineId, endId, true);
-                  else if (isTail) engine.extendLine(activeLineId, endId, false);
+      // Handle Asset Drop
+      if (interactionRef.current.draggingAssetType) {
+          let dropped = false;
+          const assetType = interactionRef.current.draggingAssetType;
+
+          // Find line under cursor (approximate by finding closest segment)
+          let targetLineId: string | null = null;
+          let minDist = 20;
+
+          for (const line of engine.state.lines) {
+              for (let i=0; i < line.stationIds.length-1; i++) {
+                 const s1 = engine.state.stations.find(s => s.id === line.stationIds[i]);
+                 const s2 = engine.state.stations.find(s => s.id === line.stationIds[i+1]);
+                 if (s1 && s2) {
+                     const d = distToSegment(pos, s1.pos, s2.pos);
+                     if (d < minDist) {
+                         minDist = d;
+                         targetLineId = line.id;
+                     }
+                 }
               }
-          } else {
-              // Create new line
-              // Determine next color index
-              const colorIdx = engine.state.lines.length;
-              engine.createLine([startId, endId], colorIdx);
           }
+
+          if (targetLineId) {
+              // STRICT EDITING: If line selected, can only drop on THAT line.
+              if (selectedLineId && targetLineId !== selectedLineId) {
+                  playSound('warning');
+                  interactionRef.current.draggingAssetType = null;
+                  return;
+              }
+
+              if (assetType === AssetType.LOCOMOTIVE) {
+                  dropped = engine.addLocomotiveToLine(targetLineId);
+              } else if (assetType === AssetType.CARRIAGE) {
+                  dropped = engine.addCarriageToLine(targetLineId);
+              }
+          }
+
+          if (dropped) playSound('connect');
+          else playSound('warning'); // Invalid drop
+
+          interactionRef.current.draggingAssetType = null;
+          setUiState({...engine.state}); // Force update UI counts
+          return;
       }
-      
-      // Reset interaction
-      interactionRef.current.isDragging = false;
-      interactionRef.current.dragStartStationId = null;
-      interactionRef.current.dragCurrentPos = null;
-      interactionRef.current.activeLineId = null;
-      interactionRef.current.hoverStationId = null;
+
+      // Handle Line Dragging
+      if (interactionRef.current.isDragging) {
+          const { dragStartStationId, hoverStationId, activeLineId } = interactionRef.current;
+          let success = false;
+
+          if (dragStartStationId && hoverStationId && dragStartStationId !== hoverStationId) {
+              if (activeLineId) {
+                  const line = engine.state.lines.find(l => l.id === activeLineId);
+                  if (line) {
+                      const isHead = line.stationIds[0] === dragStartStationId;
+                      const isTail = line.stationIds[line.stationIds.length - 1] === dragStartStationId;
+                      if (isHead) success = engine.extendLine(activeLineId, hoverStationId, true);
+                      else if (isTail) success = engine.extendLine(activeLineId, hoverStationId, false);
+                  }
+              } else {
+                  // If selectedLineId is active, we should never reach here due to handlePointerDown restrictions.
+                  const colorIdx = engine.state.lines.length;
+                  const newId = engine.createLine([dragStartStationId, hoverStationId], colorIdx);
+                  if (newId) { success = true; setSelectedLineId(newId); }
+              }
+          }
+          if (success) playSound('connect');
+          interactionRef.current.isDragging = false;
+          interactionRef.current.dragStartStationId = null;
+          interactionRef.current.activeLineId = null;
+          interactionRef.current.hoverStationId = null;
+      }
+  };
+
+  const handleAssetDragStart = (type: AssetType) => {
+      interactionRef.current.draggingAssetType = type;
   };
 
   const handleUpgrade = (type: AssetType) => {
       engineRef.current?.selectUpgrade(type);
+      setSpeed(1);
       if (engineRef.current) setUiState({...engineRef.current.state});
   };
 
-  const togglePause = () => {
-     if (engineRef.current) {
-         engineRef.current.state.isPaused = !engineRef.current.state.isPaused;
-         setUiState({...engineRef.current.state});
-     }
-  };
-
   return (
-    <div className="w-full h-screen overflow-hidden relative select-none">
-      {/* Menu */}
+    <div className="w-full h-screen overflow-hidden relative select-none" onContextMenu={(e) => e.preventDefault()}>
       {menuOpen && (
          <div className="absolute inset-0 z-50 bg-[#fcf9f2] flex flex-col items-center justify-center p-4">
-            <h1 className="text-6xl font-black tracking-tighter text-slate-800 mb-8">METRO MINI</h1>
-            <div className="flex flex-col gap-4 w-64">
-                <button onClick={() => initGame(GameMode.NORMAL)} className="bg-slate-800 text-white p-4 rounded text-xl font-bold hover:bg-slate-700 transition">Play Normal</button>
-                <button onClick={() => initGame(GameMode.EXTREME)} className="bg-red-700 text-white p-4 rounded text-xl font-bold hover:bg-red-600 transition">Play Extreme</button>
-                <button onClick={() => initGame(GameMode.ENDLESS)} className="bg-blue-600 text-white p-4 rounded text-xl font-bold hover:bg-blue-500 transition">Play Endless</button>
-                <div className="text-slate-400 text-sm text-center mt-4">
-                    Connect stations with lines.<br/>
-                    Deliver passengers.<br/>
-                    Don't let stations overcrowd.
-                </div>
+            <h1 className="text-7xl font-black tracking-tighter text-slate-800 mb-2">METRO MINI</h1>
+            <p className="text-slate-500 mb-10 font-bold uppercase tracking-widest">High Performance Sim</p>
+            <div className="grid grid-cols-1 gap-4 w-72">
+                <button onClick={() => initGame(GameMode.NORMAL)} className="bg-slate-800 text-white p-4 rounded-lg text-xl font-bold hover:bg-slate-700 shadow-lg">Play Normal</button>
+                <button onClick={() => initGame(GameMode.EXTREME)} className="bg-red-700 text-white p-4 rounded-lg text-xl font-bold hover:bg-red-600 shadow-lg">Extreme</button>
+                <button onClick={() => initGame(GameMode.CREATIVE)} className="bg-teal-600 text-white p-4 rounded-lg text-xl font-bold hover:bg-teal-500 shadow-lg">Creative</button>
             </div>
          </div>
       )}
@@ -201,7 +280,7 @@ const App: React.FC = () => {
         ref={canvasRef}
         width={window.innerWidth}
         height={window.innerHeight}
-        className="block cursor-crosshair active:cursor-grabbing"
+        className={`block touch-none ${interactionRef.current.draggingAssetType ? 'cursor-grabbing' : 'cursor-crosshair active:cursor-grabbing'}`}
         onMouseDown={handlePointerDown}
         onMouseMove={handlePointerMove}
         onMouseUp={handlePointerUp}
@@ -214,9 +293,13 @@ const App: React.FC = () => {
       {uiState && !menuOpen && (
           <GameUI 
             gameState={uiState} 
+            speed={speed}
             onReset={() => setMenuOpen(true)}
             onUpgradeSelect={handleUpgrade}
-            onTogglePause={togglePause}
+            onSetSpeed={setSpeed}
+            onSelectLine={setSelectedLineId}
+            onDragAssetStart={handleAssetDragStart}
+            selectedLineId={selectedLineId}
           />
       )}
     </div>
