@@ -31,6 +31,7 @@
 The goal is to recreate the elegant simplicity of the original game designing efficient subway networks for a rapidly growing city. As stations pop up, you must redraw your lines, manage locomotives, and deploy resources like tunnels and carriages to keep the city moving.
 
 ## ✨ Features
+<img width="1514" height="888" alt="image" src="https://github.com/user-attachments/assets/813e0898-791d-41fb-ac0e-24905a2ba677" />
 
 ### 🚇 Authentic Mini Metro Experience
 - **Draw-to-Connect Gameplay**: Intuitively create and modify metro lines just like in the original game.
