@@ -1,6 +1,8 @@
 <div align="center">
+<img width="1376" height="768" alt="Mini Metro" src="https://github.com/user-attachments/assets/f1f73052-d096-4e3d-96e0-ad34408a93b4" />
 
 # 🚇 Mini Metro in JS!
+
 
 **A minimalist subway layout strategy game.**
 
