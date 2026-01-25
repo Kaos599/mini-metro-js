@@ -1,5 +1,5 @@
 {
   "name": "Metro Mini",
-  "description": "A minimalist subway layout strategy game. Connect stations, manage lines, and keep the city moving without overcrowding.",
+  "description": "A minimalist subway strategy game re-implementation of Mini Metro. Built from scratch using TypeScript, React 19, and HTML5 Canvas.",
   "requestFramePermissions": []
 }
