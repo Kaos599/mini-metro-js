@@ -14,6 +14,49 @@ export enum GameMode {
   CREATIVE = 'CREATIVE',
 }
 
+export enum TerrainStyle {
+  RIVER = 'RIVER',
+  DELTA = 'DELTA',
+  COASTAL = 'COASTAL',
+  ISLANDS = 'ISLANDS',
+}
+
+export type DifficultyPreset = 'easy' | 'normal' | 'hard' | 'extreme' | 'custom';
+
+export interface MapComplexityConfig {
+  // Difficulty preset (for quick selection)
+  preset: DifficultyPreset;
+  
+  // Terrain settings
+  terrainStyle: TerrainStyle;
+  waterCoverage: number; // 0.1 to 0.5
+  seed: number;
+  
+  // Spawn rates
+  passengerSpawnBase: number; // 0.003 to 0.01
+  passengerSpawnGrowth: number; // 0.08 to 0.25 per week
+  stationSpawnRate: number; // 0.0005 to 0.003
+  maxStations: number; // 12 to 30
+  
+  // Station settings
+  maxStationCapacity: number; // 4 to 10
+  overcrowdTimeLimit: number; // 200 to 800 ticks
+  
+  // Starting assets
+  startingLines: number; // 2 to 5
+  startingLocomotives: number; // 2 to 5
+  startingTunnels: number; // 0 to 6
+  startingCarriages: number; // 0 to 3
+  
+  // Train settings
+  trainCapacity: number; // 4 to 8
+  trainSpeed: number; // 1.0 to 3.0
+  boardingSpeed: number; // 5 to 20 ticks per passenger
+  
+  // Upgrades
+  tunnelsPerUpgrade: number; // 1 to 3
+}
+
 export enum AssetType {
   LINE = 'LINE',
   CARRIAGE = 'CARRIAGE',
@@ -113,6 +156,8 @@ export interface InteractionState {
   hoverStationId: string | null;
   selectedLineId: string | null; // For Line Manager UI
   draggingAssetType: AssetType | null; // For Asset Dragging
+  isCreatingNewLine: boolean; // For creating new lines from Line Manager
+  newLineColorIndex: number | null; // Color index for new line being created
 }
 
 export interface RouteInfo {
@@ -120,3 +165,5 @@ export interface RouteInfo {
     lineId: string;
     distance: number;
 }
+
+export type GamePhase = 'setup' | 'playing' | 'gameover';

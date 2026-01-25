@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { GameState, AssetType } from '../types';
-import { CONFIG } from '../constants';
+import { CONFIG, COLORS } from '../constants';
 
 interface GameUIProps {
     gameState: GameState;
@@ -10,14 +10,20 @@ interface GameUIProps {
     onSetSpeed: (speed: number) => void;
     onSelectLine: (id: string | null) => void;
     onDragAssetStart: (type: AssetType) => void;
+    onStartNewLine: (colorIndex: number) => void;
     selectedLineId: string | null;
+    isCreatingNewLine: boolean;
+    newLineColorIndex: number | null;
+    onCancelNewLine: () => void;
 }
 
 export const GameUI: React.FC<GameUIProps> = ({ 
-    gameState, speed, onReset, onUpgradeSelect, onSetSpeed, onSelectLine, onDragAssetStart, selectedLineId 
+    gameState, speed, onReset, onUpgradeSelect, onSetSpeed, onSelectLine, onDragAssetStart, 
+    onStartNewLine, selectedLineId, isCreatingNewLine, newLineColorIndex, onCancelNewLine 
 }) => {
     const progress = (gameState.time % CONFIG.WEEK_LENGTH) / CONFIG.WEEK_LENGTH;
     const weekDay = ['M', 'T', 'W', 'T', 'F', 'S', 'S'][Math.floor(progress * 7)];
+    const [hoveredSlot, setHoveredSlot] = useState<number | null>(null);
     
     // Get info for selected line
     const selectedLine = gameState.lines.find(l => l.id === selectedLineId);
@@ -70,7 +76,17 @@ export const GameUI: React.FC<GameUIProps> = ({
                  
                  {/* Left: Line Manager */}
                  <div className="bg-white/90 backdrop-blur px-6 py-4 rounded-2xl shadow-xl border border-slate-100 flex flex-col gap-2">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Line Manager</span>
+                    <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Line Manager</span>
+                        {isCreatingNewLine && (
+                            <button 
+                                onClick={onCancelNewLine}
+                                className="text-[10px] font-bold text-red-500 hover:text-red-700 uppercase tracking-wider"
+                            >
+                                Cancel
+                            </button>
+                        )}
+                    </div>
                     <div className="flex gap-3">
                         {gameState.lines.map(line => (
                             <button
@@ -88,13 +104,59 @@ export const GameUI: React.FC<GameUIProps> = ({
                                 </div>
                             </button>
                         ))}
-                        {Array.from({ length: gameState.assets.lines - gameState.activeAssets.linesUsed }).map((_, i) => (
-                             <div key={i} className="w-10 h-10 rounded-full border-2 border-dashed border-slate-300 bg-slate-50 opacity-50" />
-                        ))}
+                        {/* Unused line slots - Now interactive! */}
+                        {Array.from({ length: gameState.assets.lines - gameState.activeAssets.linesUsed }).map((_, i) => {
+                            const colorIndex = gameState.lines.length + i;
+                            const lineColor = COLORS.lines[colorIndex % COLORS.lines.length];
+                            const isHovered = hoveredSlot === i;
+                            const isActiveSlot = isCreatingNewLine && newLineColorIndex === colorIndex;
+                            
+                            return (
+                                <button
+                                    key={`unused-${i}`}
+                                    onClick={() => {
+                                        onSelectLine(null); // Deselect any selected line
+                                        onStartNewLine(colorIndex);
+                                    }}
+                                    onMouseEnter={() => setHoveredSlot(i)}
+                                    onMouseLeave={() => setHoveredSlot(null)}
+                                    className={`w-10 h-10 rounded-full border-2 transition-all duration-200 flex items-center justify-center relative group
+                                        ${isActiveSlot 
+                                            ? 'scale-110 shadow-lg ring-2 ring-offset-2 ring-slate-300 border-solid' 
+                                            : isHovered 
+                                                ? 'scale-110 border-solid shadow-md' 
+                                                : 'border-dashed opacity-60 hover:opacity-100'
+                                        }`}
+                                    style={{ 
+                                        backgroundColor: isActiveSlot ? lineColor : (isHovered ? lineColor : `${lineColor}40`),
+                                        borderColor: lineColor,
+                                    }}
+                                >
+                                    {/* Plus icon with animation */}
+                                    <span 
+                                        className={`text-lg font-bold transition-all duration-200 ${
+                                            isActiveSlot ? 'text-white' : (isHovered ? 'text-white scale-125' : 'opacity-0')
+                                        }`}
+                                        style={{ color: isActiveSlot || isHovered ? 'white' : lineColor }}
+                                    >
+                                        +
+                                    </span>
+                                    {/* Tooltip */}
+                                    <div className="absolute bottom-full mb-2 hidden group-hover:block bg-slate-800 text-white text-xs px-2 py-1 rounded whitespace-nowrap z-10">
+                                        {isActiveSlot ? 'Click a station to start' : 'Create new line'}
+                                    </div>
+                                </button>
+                            );
+                        })}
                     </div>
                     {selectedLine && (
                         <div className="text-xs text-slate-500 font-mono mt-1">
                             Current: {selectedLine.trains.length} Trains
+                        </div>
+                    )}
+                    {isCreatingNewLine && (
+                        <div className="text-xs text-blue-600 font-medium mt-1 animate-pulse">
+                            Click a station to start your new line
                         </div>
                     )}
                  </div>

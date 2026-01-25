@@ -1,21 +1,28 @@
-import { GameState, GameMode, Station, Line, Train, Passenger, StationShape, AssetType, Point, RouteInfo } from '../types';
-import { CONFIG, COLORS } from '../constants';
+import { GameState, GameMode, Station, Line, Train, Passenger, StationShape, AssetType, Point, RouteInfo, MapComplexityConfig } from '../types';
+import { CONFIG, COLORS, DEFAULT_COMPLEXITY_CONFIG } from '../constants';
 import { dist, lineIntersectsPolygon, isPointInPolygon, distToSegment } from '../utils/geometry';
 import { ObjectPool } from '../utils/pool';
 import { buildRoutingTable, RoutingTable } from '../utils/pathfinding';
+import { generateMap, createSeededRandom } from '../utils/mapGenerator';
 
 export class CoreSim {
   state: GameState;
+  config: MapComplexityConfig;
   private stationIdCounter = 0;
   private passengerIdCounter = 0;
   private trainIdCounter = 0;
   private lineIdCounter = 0;
+  private rng: () => number;
 
   private passengerPool: ObjectPool<Passenger>;
   private routingTable: RoutingTable = new Map();
   private isNetworkDirty = true; // Flag to rebuild routing
 
-  constructor(mode: GameMode, width: number, height: number) {
+  constructor(mode: GameMode, width: number, height: number, config?: Partial<MapComplexityConfig>) {
+    // Merge provided config with defaults
+    this.config = { ...DEFAULT_COMPLEXITY_CONFIG, ...config };
+    this.rng = createSeededRandom(this.config.seed);
+    
     this.state = this.getInitialState(mode, width, height);
     
     // Pool Setup
@@ -24,12 +31,14 @@ export class CoreSim {
         (p) => { p.id = ''; p.nextHopLineId = null; }
     );
 
-    this.generateMap(width, height);
+    // Generate map using the new generator
+    const mapData = generateMap(width, height, this.config);
+    this.state.water = mapData.water;
     
-    // Initial Spawn
-    this.spawnStation(width / 2, height / 2, StationShape.SQUARE);
-    this.spawnStation(width / 2 + 150, height / 2 + 50, StationShape.TRIANGLE);
-    this.spawnStation(width / 2 - 100, height / 2 + 120, StationShape.CIRCLE);
+    // Spawn initial stations from map data
+    mapData.initialStations.forEach(station => {
+      this.spawnStation(station.pos.x, station.pos.y, station.shape);
+    });
   }
 
   private getInitialState(mode: GameMode, w: number, h: number): GameState {
@@ -41,11 +50,11 @@ export class CoreSim {
       week: 1,
       score: 0,
       assets: {
-        lines: 3,
-        tunnels: 3,
-        carriages: 0,
+        lines: this.config.startingLines,
+        tunnels: this.config.startingTunnels,
+        carriages: this.config.startingCarriages,
         interchanges: 0,
-        locomotives: 3, // Start with same amount as lines usually
+        locomotives: this.config.startingLocomotives,
       },
       activeAssets: {
         linesUsed: 0,
@@ -60,21 +69,6 @@ export class CoreSim {
       timeScale: 1.0,
       camera: { x: 0, y: 0, zoom: 1 },
     };
-  }
-
-  private generateMap(w: number, h: number) {
-    const riverWidth = 60;
-    const river: Point[] = [
-      { x: 0, y: h / 2 - riverWidth },
-      { x: w * 0.4, y: h / 2 - riverWidth },
-      { x: w * 0.6, y: h * 0.7 - riverWidth },
-      { x: w, y: h * 0.7 - riverWidth },
-      { x: w, y: h * 0.7 + riverWidth },
-      { x: w * 0.6, y: h * 0.7 + riverWidth },
-      { x: w * 0.4, y: h / 2 + riverWidth },
-      { x: 0, y: h / 2 + riverWidth },
-    ];
-    this.state.water.push(river);
   }
 
   // --- External Actions ---
@@ -237,7 +231,7 @@ export class CoreSim {
             this.state.assets.locomotives++; // A new line usually comes with a train
             break;
           case AssetType.CARRIAGE: this.state.assets.carriages++; break;
-          case AssetType.TUNNEL: this.state.assets.tunnels += 2; break; 
+          case AssetType.TUNNEL: this.state.assets.tunnels += this.config.tunnelsPerUpgrade; break; 
           case AssetType.LOCOMOTIVE: this.state.assets.locomotives++; break;
           case AssetType.INTERCHANGE: this.state.assets.interchanges++; break;
       }
@@ -285,19 +279,19 @@ export class CoreSim {
   private handleSpawning() {
       if (this.state.mode === GameMode.CREATIVE) return;
 
-      const weekFactor = 1 + (this.state.week * 0.15);
+      const weekFactor = 1 + (this.state.week * this.config.passengerSpawnGrowth);
       const stationFactor = Math.max(1, this.state.stations.length / 8);
-      let spawnChance = 0.005 * weekFactor * stationFactor;
+      let spawnChance = this.config.passengerSpawnBase * weekFactor * stationFactor;
       
-      const nearDeath = this.state.stations.some(s => s.passengers.length > CONFIG.MAX_STATION_CAPACITY * 0.8);
+      const nearDeath = this.state.stations.some(s => s.passengers.length > this.config.maxStationCapacity * 0.8);
       if (nearDeath) spawnChance *= 0.5;
 
-      const maxStations = 15 + Math.floor(this.state.time / 2000); 
-      if (this.state.stations.length < maxStations && Math.random() < 0.001) {
+      const maxStations = this.config.maxStations; 
+      if (this.state.stations.length < maxStations && this.rng() < this.config.stationSpawnRate) {
           this.spawnRandomStation();
       }
 
-      if (Math.random() < spawnChance) {
+      if (this.rng() < spawnChance) {
           const stations = this.state.stations;
           if (stations.length < 2) return;
           const origin = stations[Math.floor(Math.random() * stations.length)];
@@ -328,14 +322,14 @@ export class CoreSim {
   }
 
   private spawnRandomStation() {
-      const w = 1000; 
-      const h = 800;
+      const w = window.innerWidth || 1000; 
+      const h = window.innerHeight || 800;
       let pos: Point = { x: 0, y: 0 };
       let valid = false;
       let attempts = 0;
 
       while (!valid && attempts < 50) {
-          pos = { x: 50 + Math.random()*(w-100), y: 50 + Math.random()*(h-100) };
+          pos = { x: 50 + this.rng()*(w-100), y: 50 + this.rng()*(h-100) };
           let inWater = false;
           for (const poly of this.state.water) {
               if (isPointInPolygon(pos, poly)) { inWater = true; break; }
@@ -350,7 +344,7 @@ export class CoreSim {
       }
 
       if (valid) {
-          const r = Math.random();
+          const r = this.rng();
           let shape = StationShape.CIRCLE;
           if (r < 0.2) shape = StationShape.TRIANGLE;
           if (r < 0.05) shape = StationShape.SQUARE;
@@ -373,7 +367,7 @@ export class CoreSim {
       if (!line) return;
       const train: Train = {
           id: `t_${this.trainIdCounter++}`, lineId, passengers: [],
-          capacity: CONFIG.DEFAULT_TRAIN_CAPACITY,
+          capacity: this.config.trainCapacity,
           segmentIndex: 0, t: 0, direction: 1,
           prevSegmentIndex: 0, prevT: 0,
           status: 'MOVING', stopTimer: 0
@@ -512,16 +506,16 @@ export class CoreSim {
   private checkOvercrowding() {
       if (this.state.mode === GameMode.ENDLESS || this.state.mode === GameMode.CREATIVE) return;
       this.state.stations.forEach(s => {
-          if (s.passengers.length > CONFIG.MAX_STATION_CAPACITY * 0.7) {
+          if (s.passengers.length > this.config.maxStationCapacity * 0.7) {
               s.pulsePhase = (this.state.time * 0.2) % (Math.PI * 2);
           } else {
               s.pulsePhase = 0;
           }
 
-          if (s.passengers.length > CONFIG.MAX_STATION_CAPACITY) {
+          if (s.passengers.length > this.config.maxStationCapacity) {
               s.isOvercrowded = true;
               s.overcrowdTimer++;
-              if (s.overcrowdTimer > CONFIG.OVERCROWD_TIME_LIMIT) this.state.isGameOver = true;
+              if (s.overcrowdTimer > this.config.overcrowdTimeLimit) this.state.isGameOver = true;
           } else {
               s.isOvercrowded = false;
               s.overcrowdTimer = Math.max(0, s.overcrowdTimer - 1);

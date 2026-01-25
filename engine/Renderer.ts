@@ -1,5 +1,5 @@
 
-import { GameState, Station, Line, Train, InteractionState } from '../types';
+import { GameState, Station, Line, Train, InteractionState, Point } from '../types';
 import { COLORS, CONFIG } from '../constants';
 import { lerp } from '../utils/geometry';
 
@@ -14,24 +14,47 @@ export class Renderer {
     this.height = height;
   }
 
+  // Convert screen coordinates to world coordinates
+  screenToWorld(screenX: number, screenY: number, camera: { x: number; y: number; zoom: number }): Point {
+    return {
+      x: (screenX / camera.zoom) + camera.x,
+      y: (screenY / camera.zoom) + camera.y,
+    };
+  }
+
+  // Convert world coordinates to screen coordinates
+  worldToScreen(worldX: number, worldY: number, camera: { x: number; y: number; zoom: number }): Point {
+    return {
+      x: (worldX - camera.x) * camera.zoom,
+      y: (worldY - camera.y) * camera.zoom,
+    };
+  }
+
   render(state: GameState, interaction: InteractionState, alpha: number) {
     const { ctx, width, height } = this;
+    const camera = state.camera;
     
-    // Clear
+    // Clear (in screen space, before camera transform)
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, width, height);
+
+    // Apply camera transform
+    ctx.save();
+    ctx.scale(camera.zoom, camera.zoom);
+    ctx.translate(-camera.x, -camera.y);
 
     // 1. Draw Water
     ctx.fillStyle = COLORS.water;
     state.water.forEach(poly => {
+      if (poly.length === 0) return;
       ctx.beginPath();
       ctx.moveTo(poly[0].x, poly[0].y);
       for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i].x, poly[i].y);
+      ctx.closePath();
       ctx.fill();
     });
 
-    // 2. Batch Draw Lines (Optimization: Group by color logic? Lines are already unique colors usually)
-    // But we can optimize context switching.
+    // 2. Batch Draw Lines
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
     ctx.lineWidth = CONFIG.LINE_WIDTH;
@@ -57,14 +80,19 @@ export class Renderer {
     });
     ctx.globalAlpha = 1.0;
 
-    // 3. Interaction Ghost Line
+    // 3. Interaction Ghost Line (need to convert drag position to world coords)
     if (interaction.isDragging && interaction.dragStartStationId && interaction.dragCurrentPos) {
         const startStation = state.stations.find(s => s.id === interaction.dragStartStationId);
         if (startStation) {
-            ctx.beginPath();
-            ctx.strokeStyle = interaction.activeLineId 
+            // dragCurrentPos is in world coordinates (converted in App.tsx)
+            const ghostColor = interaction.activeLineId 
                 ? (state.lines.find(l => l.id === interaction.activeLineId)?.color || '#999')
-                : '#333';
+                : (interaction.isCreatingNewLine && interaction.newLineColorIndex !== null)
+                    ? COLORS.lines[interaction.newLineColorIndex % COLORS.lines.length]
+                    : '#333';
+            
+            ctx.beginPath();
+            ctx.strokeStyle = ghostColor;
             ctx.setLineDash([10, 10]);
             ctx.moveTo(startStation.pos.x, startStation.pos.y);
             ctx.lineTo(interaction.dragCurrentPos.x, interaction.dragCurrentPos.y);
@@ -92,6 +120,23 @@ export class Renderer {
     state.stations.forEach(station => {
         this.drawStation(ctx, station);
     });
+
+    // Draw "creating new line" indicator on stations when in drawing mode
+    if (interaction.isCreatingNewLine && interaction.newLineColorIndex !== null) {
+        const lineColor = COLORS.lines[interaction.newLineColorIndex % COLORS.lines.length];
+        state.stations.forEach(station => {
+            ctx.beginPath();
+            ctx.arc(station.pos.x, station.pos.y, CONFIG.STATION_RADIUS + 6, 0, Math.PI * 2);
+            ctx.strokeStyle = lineColor;
+            ctx.lineWidth = 2;
+            ctx.setLineDash([4, 4]);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        });
+    }
+
+    // Restore camera transform
+    ctx.restore();
   }
 
   private drawStation(ctx: CanvasRenderingContext2D, station: Station) {
