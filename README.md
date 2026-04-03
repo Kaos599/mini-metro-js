@@ -30,28 +30,28 @@
 
 The goal is to recreate the elegant simplicity of the original game designing efficient subway networks for a rapidly growing city. As stations pop up, you must redraw your lines, manage locomotives, and deploy resources like tunnels and carriages to keep the city moving.
 
-## ✨ Features
+## Features
 <img width="1514" height="888" alt="image" src="https://github.com/user-attachments/assets/813e0898-791d-41fb-ac0e-24905a2ba677" />
 
-### 🚇 Authentic Mini Metro Experience
+### Authentic Mini Metro Experience
 - **Draw-to-Connect Gameplay**: Intuitively create and modify metro lines just like in the original game.
 - **Procedural City Growth**: Dynamic station spawning ensures every session presents a new logistical challenge.
 - **Shape-Based Routing**: Passengers find their own way through your network based on their destination shape.
 - **Weekly Upgrades**: Survive the week to choose between vital assets new lines, locomotives, carriages, or tunnels.
 
-### 🎮 Game Modes
+### Game Modes
 | Mode | Description |
 | :--- | :--- |
 | **Normal** | The classic Mini Metro experience. Balance efficiency and overcrowding. |
 | **Extreme** | Once a line is placed, it's permanent. True strategic planning. |
 | **Endless** | A zen-like sandbox mode. Build your dream network without the risk of game over. |
 
-### 🛠 Technical Highlights
+### Technical Highlights
 - **60FPS Canvas Engine**: Optimized rendering loop for smooth train movement and UI interactions.
 - **React 19 & TypeScript**: A modern codebase showcasing how to build complex simulations in a web environment.
 - **Touch-First Design**: Fully responsive and playable on mobile devices with intuitive touch controls.
 
-## 🕹 How to Play
+## How to Play
 
 1.  **Connect Stations**: Click or touch and drag between geometric stations (Circle, Triangle, Square) to create a metro line.
 2.  **Assign Trains**: Locomotives automatically run on your lines to transport passengers.
@@ -59,7 +59,7 @@ The goal is to recreate the elegant simplicity of the original game designing ef
 4.  **Manage Overcrowding**: Keep an eye on the red indicators! If a station stays overcrowded for too long, the network fails.
 5.  **Upgrade**: Every Sunday, choose a new asset to help your network keep up with the city's growth.
 
-## 🚀 Installation
+## Installation
 
 Run this Mini Metro re-implementation locally:
 
@@ -79,14 +79,14 @@ npm run dev
 
 Open `http://localhost:3000` in your browser to start building.
 
-## 🗺 Roadmap
+## Roadmap
 
 - [ ] **Global Leaderboards**: Compare your scores with players worldwide.
 - [ ] **City Presets**: Play on maps inspired by real-world cities like London and Paris.
 - [ ] **Advanced Upgrades**: Interchange stations and multi-track support.
 - [ ] **Soundscape**: Minimalist ambient audio to match the original game's atmosphere.
 
-## 📄 License
+## License
 
 Distributed under the Apache 2.0 License. See `LICENSE` for more information.
 
