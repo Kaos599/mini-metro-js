@@ -81,7 +81,6 @@ Open `http://localhost:3000` in your browser to start building.
 
 ## Roadmap
 
-- [ ] **Global Leaderboards**: Compare your scores with players worldwide.
 - [ ] **City Presets**: Play on maps inspired by real-world cities like London and Paris.
 - [ ] **Advanced Upgrades**: Interchange stations and multi-track support.
 - [ ] **Soundscape**: Minimalist ambient audio to match the original game's atmosphere.
