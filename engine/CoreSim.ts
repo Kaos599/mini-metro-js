@@ -1,6 +1,6 @@
 import { GameState, GameMode, Station, Line, Train, Passenger, StationShape, AssetType, Point, RouteInfo, MapComplexityConfig } from '../types';
 import { CONFIG, COLORS, DEFAULT_COMPLEXITY_CONFIG } from '../constants';
-import { dist, lineIntersectsPolygon, isPointInPolygon, distToSegment } from '../utils/geometry';
+import { dist, distSq, lineIntersectsPolygon, isPointInPolygon, distToSegment } from '../utils/geometry';
 import { ObjectPool } from '../utils/pool';
 import { buildRoutingTable, RoutingTable } from '../utils/pathfinding';
 import { generateMap, createSeededRandom } from '../utils/mapGenerator';
@@ -337,7 +337,7 @@ export class CoreSim {
           if (inWater) { attempts++; continue; }
           let tooClose = false;
           for (const s of this.state.stations) {
-              if (dist(pos, s.pos) < 80) { tooClose = true; break; }
+              if (distSq(pos, s.pos) < 6400) { tooClose = true; break; }
           }
           if (tooClose) { attempts++; continue; }
           valid = true;

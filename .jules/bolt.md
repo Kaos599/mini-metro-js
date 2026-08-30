@@ -1,0 +1,3 @@
+## 2026-08-30 - distSq Optimization in Hot Paths
+**Learning:** Found significant performance bottleneck in threshold checks (e.g., hit-testing `dist(pos, station.pos) < CONFIG.STATION_RADIUS * 2`) across `App.tsx`, `engine/CoreSim.ts`, and `utils/mapGenerator.ts`. `Math.pow` and `Math.sqrt` were causing heavy CPU overhead inside hot loops.
+**Action:** Introduced `distSq` function to bypass `Math.sqrt` and `Math.pow(..., 2)` by comparing squared distances to squared thresholds (`distSq < threshold * threshold`). Ensure `distSq` is used instead of `dist` for all magnitude comparisons where the actual distance value is not required.
