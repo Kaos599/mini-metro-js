@@ -53,16 +53,23 @@ export const GameUI: React.FC<GameUIProps> = ({
                 </div>
 
                 {/* Speed Controls */}
-                <div className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1">
+                <div
+                    className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1"
+                    role="group"
+                    aria-label="Game speed controls"
+                >
                     {[0, 1, 2, 5, 20].map((s) => (
                         <button 
                             key={s}
                             onClick={() => onSetSpeed(s)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                            aria-label={s === 0 ? "Pause" : `${s}x Speed`}
+                            aria-pressed={speed === s}
+                            title={s === 0 ? "Pause" : `${s}x Speed`}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
                                 speed === s ? 'bg-slate-800 text-white scale-110 shadow' : 'text-slate-500 hover:bg-slate-100'
                             }`}
                         >
-                            {s === 0 ? '||' : `${s}x`}
+                            <span aria-hidden="true">{s === 0 ? '||' : `${s}x`}</span>
                         </button>
                     ))}
                 </div>
