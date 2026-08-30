@@ -4,7 +4,7 @@ import { Renderer } from './engine/Renderer';
 import { GameUI } from './components/GameUI';
 import { AnimatedBackground } from './components/AnimatedBackground';
 import { GameMode, Point, InteractionState, AssetType, GamePhase, MapComplexityConfig, TerrainStyle, DifficultyPreset } from './types';
-import { dist, distToSegment } from './utils/geometry';
+import { dist, distSq, distToSegment } from './utils/geometry';
 import { CONFIG, COLORS, DIFFICULTY_PRESETS, DEFAULT_COMPLEXITY_CONFIG } from './constants';
 import { playSound } from './utils/audio';
 import { generateSeed } from './utils/mapGenerator';
@@ -297,7 +297,7 @@ const App: React.FC = () => {
       if (isMiddleClick || isShiftClick || isPanMode) {
           // In pan mode, we need to check if clicking on empty space
           if (isPanMode) {
-              const station = engine.state.stations.find(s => dist(s.pos, pos) < CONFIG.STATION_RADIUS * 2);
+              const station = engine.state.stations.find(s => distSq(s.pos, pos) < Math.pow(CONFIG.STATION_RADIUS * 2, 2));
               if (station) {
                   // Still allow station interaction in pan mode
                   // Fall through to normal handling
@@ -329,7 +329,7 @@ const App: React.FC = () => {
           return;
       }
 
-      const station = engine.state.stations.find(s => dist(s.pos, pos) < CONFIG.STATION_RADIUS * 2);
+      const station = engine.state.stations.find(s => distSq(s.pos, pos) < Math.pow(CONFIG.STATION_RADIUS * 2, 2));
       
       // NEW LINE CREATION MODE
       if (isCreatingNewLine && newLineColorIndex !== null && station) {
@@ -398,7 +398,7 @@ const App: React.FC = () => {
       interactionRef.current.dragCurrentPos = pos;
 
       if (interactionRef.current.isDragging) {
-          const hoverStation = engineRef.current.state.stations.find(s => dist(s.pos, pos) < CONFIG.STATION_RADIUS * 2.5);
+          const hoverStation = engineRef.current.state.stations.find(s => distSq(s.pos, pos) < Math.pow(CONFIG.STATION_RADIUS * 2.5, 2));
           interactionRef.current.hoverStationId = hoverStation ? hoverStation.id : null;
           if (hoverStation) interactionRef.current.dragCurrentPos = hoverStation.pos;
       }
