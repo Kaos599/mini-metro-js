@@ -58,7 +58,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                         <button 
                             key={s}
                             onClick={() => onSetSpeed(s)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                            aria-label={s === 0 ? "Pause game" : `Set speed to ${s}x`}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
                                 speed === s ? 'bg-slate-800 text-white scale-110 shadow' : 'text-slate-500 hover:bg-slate-100'
                             }`}
                         >
@@ -76,7 +77,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                 {/* Pan Mode Toggle */}
                 <button
                     onClick={onTogglePanMode}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+                    aria-label={isPanMode ? "Disable pan mode" : "Enable pan mode"}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
                         isPanMode 
                             ? 'bg-blue-600 text-white shadow-lg' 
                             : 'bg-white/90 text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -116,7 +118,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                             <button
                                 key={line.id}
                                 onClick={() => onSelectLine(selectedLineId === line.id ? null : line.id)}
-                                className={`w-10 h-10 rounded-full border-4 transition-all flex items-center justify-center relative group ${
+                                aria-label={`Select line ${line.id}`}
+                                className={`w-10 h-10 rounded-full border-4 transition-all flex items-center justify-center relative group focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
                                     selectedLineId === line.id ? 'scale-110 shadow-lg ring-2 ring-offset-2 ring-slate-300 opacity-100' : (selectedLineId ? 'opacity-30 hover:opacity-100 hover:scale-105' : 'opacity-100 hover:scale-105')
                                 }`}
                                 style={{ backgroundColor: line.color, borderColor: 'white' }}
@@ -144,7 +147,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     }}
                                     onMouseEnter={() => setHoveredSlot(i)}
                                     onMouseLeave={() => setHoveredSlot(null)}
-                                    className={`w-10 h-10 rounded-full border-2 transition-all duration-200 flex items-center justify-center relative group
+                                    aria-label="Create new line"
+                                    className={`w-10 h-10 rounded-full border-2 transition-all duration-200 flex items-center justify-center relative group focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none
                                         ${isActiveSlot 
                                             ? 'scale-110 shadow-lg ring-2 ring-offset-2 ring-slate-300 border-solid' 
                                             : isHovered 
@@ -194,13 +198,13 @@ export const GameUI: React.FC<GameUIProps> = ({
                             onMouseDown={() => onDragAssetStart(AssetType.LOCOMOTIVE)}
                             onTouchStart={() => onDragAssetStart(AssetType.LOCOMOTIVE)}
                         >
-                            <div className="w-12 h-12 bg-slate-100 rounded-xl border-2 border-slate-200 flex items-center justify-center text-2xl hover:border-blue-400 hover:bg-white transition-colors relative">
+                            <div className="w-12 h-12 bg-slate-100 rounded-xl border-2 border-slate-200 flex items-center justify-center text-2xl hover:border-blue-400 hover:bg-white transition-colors relative" aria-label="Available trains to drag">
                                 🚄
                                 <span className="absolute -top-2 -right-2 bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                                     {gameState.assets.locomotives - gameState.activeAssets.locomotivesUsed}
                                 </span>
                             </div>
-                            <span className="text-xs font-bold text-slate-600">Train</span>
+                            <span className="text-xs font-bold text-slate-600" aria-hidden="true">Train</span>
                         </div>
 
                         <div 
@@ -208,13 +212,13 @@ export const GameUI: React.FC<GameUIProps> = ({
                             onMouseDown={() => onDragAssetStart(AssetType.CARRIAGE)}
                             onTouchStart={() => onDragAssetStart(AssetType.CARRIAGE)}
                         >
-                            <div className="w-12 h-12 bg-slate-100 rounded-xl border-2 border-slate-200 flex items-center justify-center text-2xl hover:border-purple-400 hover:bg-white transition-colors relative">
+                            <div className="w-12 h-12 bg-slate-100 rounded-xl border-2 border-slate-200 flex items-center justify-center text-2xl hover:border-purple-400 hover:bg-white transition-colors relative" aria-label="Available carriages to drag">
                                 🚃
                                 <span className="absolute -top-2 -right-2 bg-purple-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold">
                                     {gameState.assets.carriages}
                                 </span>
                             </div>
-                            <span className="text-xs font-bold text-slate-600">Carriage</span>
+                            <span className="text-xs font-bold text-slate-600" aria-hidden="true">Carriage</span>
                         </div>
                     </div>
                  </div>
