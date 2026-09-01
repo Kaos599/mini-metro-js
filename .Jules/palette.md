@@ -1,0 +1,3 @@
+## 2024-03-24 - HUD Icon Accessibility
+**Learning:** Abstract symbols like `||` (pause) and HUD icons require explicit `aria-label`s and `aria-hidden` on the inner elements to prevent screen readers from reading characters literally ("pipe pipe") or getting confused by SVGs.
+**Action:** When adding HUD controls or icon-only buttons, always implement `aria-label` (and `aria-pressed` for toggles) and wrap visual-only elements in `<span aria-hidden="true">` or apply `aria-hidden` directly to them.

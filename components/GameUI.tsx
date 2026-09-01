@@ -53,16 +53,23 @@ export const GameUI: React.FC<GameUIProps> = ({
                 </div>
 
                 {/* Speed Controls */}
-                <div className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1">
+                <div
+                    className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1"
+                    role="group"
+                    aria-label="Game speed controls"
+                >
                     {[0, 1, 2, 5, 20].map((s) => (
                         <button 
                             key={s}
                             onClick={() => onSetSpeed(s)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                            aria-label={s === 0 ? "Pause game" : `Set speed to ${s}x`}
+                            aria-pressed={speed === s}
+                            title={s === 0 ? "Pause game" : `Speed ${s}x`}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
                                 speed === s ? 'bg-slate-800 text-white scale-110 shadow' : 'text-slate-500 hover:bg-slate-100'
                             }`}
                         >
-                            {s === 0 ? '||' : `${s}x`}
+                            <span aria-hidden="true">{s === 0 ? '||' : `${s}x`}</span>
                         </button>
                     ))}
                 </div>
@@ -76,14 +83,16 @@ export const GameUI: React.FC<GameUIProps> = ({
                 {/* Pan Mode Toggle */}
                 <button
                     onClick={onTogglePanMode}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+                    aria-label="Toggle pan mode"
+                    aria-pressed={isPanMode}
+                    title="Toggle pan mode (drag to move around the map)"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
                         isPanMode 
                             ? 'bg-blue-600 text-white shadow-lg' 
                             : 'bg-white/90 text-slate-600 hover:bg-slate-100 border border-slate-200'
                     }`}
-                    title="Toggle pan mode (drag to move around the map)"
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                         <polyline points="5 9 2 12 5 15"></polyline>
                         <polyline points="9 5 12 2 15 5"></polyline>
                         <polyline points="15 19 12 22 9 19"></polyline>
@@ -91,7 +100,7 @@ export const GameUI: React.FC<GameUIProps> = ({
                         <line x1="2" y1="12" x2="22" y2="12"></line>
                         <line x1="12" y1="2" x2="12" y2="22"></line>
                     </svg>
-                    <span className="text-xs uppercase tracking-wider">Pan</span>
+                    <span className="text-xs uppercase tracking-wider" aria-hidden="true">Pan</span>
                 </button>
             </div>
             
