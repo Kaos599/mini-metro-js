@@ -1,0 +1,3 @@
+## 2024-05-15 - [Pathfinding Optimization]
+**Learning:** The pathfinding algorithm uses BFS to build routing tables. Currently, inside the BFS while loop, to find neighbors of the current station, it iterates over *all* lines and *all* stations within those lines (`O(V * L * S)` where V is vertices, L is lines, S is stations per line). For dense networks, this becomes a performance bottleneck in the `buildRoutingTable` function since it is called every time a line or station changes.
+**Action:** Pre-compute an adjacency list once per `buildRoutingTable` call (`O(L * S)`) to allow `O(1)` neighbor lookups during the BFS traversal.
