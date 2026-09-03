@@ -7,8 +7,26 @@ export type RoutingTable = Map<string, Map<StationShape, RouteInfo>>;
 export const buildRoutingTable = (stations: Station[], lines: Line[]): RoutingTable => {
     const table: RoutingTable = new Map();
 
+    // ⚡ Bolt: Precompute adjacency list to replace O(L*S) neighbor lookup with O(1) inside BFS
+    const adj = new Map<string, { nid: string, lineId: string }[]>();
+
     // Initialize map
-    stations.forEach(s => table.set(s.id, new Map()));
+    stations.forEach(s => {
+        table.set(s.id, new Map());
+        adj.set(s.id, []);
+    });
+
+    // ⚡ Bolt: Build adjacency list once (O(E)) instead of iterating all lines for every node in BFS
+    lines.forEach(line => {
+        for (let i = 0; i < line.stationIds.length; i++) {
+            const sid = line.stationIds[i];
+            const edges = adj.get(sid);
+            if (edges) {
+                if (i > 0) edges.push({ nid: line.stationIds[i - 1], lineId: line.id });
+                if (i < line.stationIds.length - 1) edges.push({ nid: line.stationIds[i + 1], lineId: line.id });
+            }
+        }
+    });
 
     // We need to calculate the route to EACH shape type from EACH station
     const shapes = Object.values(StationShape) as StationShape[];
@@ -32,38 +50,23 @@ export const buildRoutingTable = (stations: Station[], lines: Line[]): RoutingTa
         while(queue.length > 0) {
             const current = queue.shift()!;
 
-            // Find neighbors (stations connected by lines)
-            // A neighbor N is connected to Current C if they share a line
-            // Backwards search: If we go from N to C via Line L, then N's next hop is C via L.
+            // ⚡ Bolt: O(1) neighbor lookup instead of O(L*S) loop
+            const neighbors = adj.get(current.id) || [];
             
-            lines.forEach(line => {
-                for (let i = 0; i < line.stationIds.length; i++) {
-                    const sid = line.stationIds[i];
-                    
-                    // If this is the current station, look at neighbors in the line
-                    if (sid === current.id) {
-                        // Check previous and next in line
-                        const neighbors = [];
-                        if (i > 0) neighbors.push(line.stationIds[i - 1]);
-                        if (i < line.stationIds.length - 1) neighbors.push(line.stationIds[i + 1]);
-
-                        neighbors.forEach(nid => {
-                            if (!visited.has(nid)) {
-                                visited.add(nid);
-                                // The neighbor N connects to Current C via 'line'.
-                                // So a passenger at N wants to go to C.
-                                const route: RouteInfo = {
-                                    distance: current.dist + 1,
-                                    lineId: line.id,
-                                    nextStationId: current.id
-                                };
-                                table.get(nid)?.set(targetShape, route);
-                                queue.push({ id: nid, dist: current.dist + 1, lineId: line.id, nextId: current.id });
-                            }
-                        });
-                    }
+            for (const neighbor of neighbors) {
+                if (!visited.has(neighbor.nid)) {
+                    visited.add(neighbor.nid);
+                    // The neighbor N connects to Current C via 'line'.
+                    // So a passenger at N wants to go to C.
+                    const route: RouteInfo = {
+                        distance: current.dist + 1,
+                        lineId: neighbor.lineId,
+                        nextStationId: current.id
+                    };
+                    table.get(neighbor.nid)?.set(targetShape, route);
+                    queue.push({ id: neighbor.nid, dist: current.dist + 1, lineId: neighbor.lineId, nextId: current.id });
                 }
-            });
+            }
         }
     });
 
