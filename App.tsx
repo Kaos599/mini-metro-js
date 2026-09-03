@@ -617,8 +617,9 @@ const App: React.FC = () => {
             
             {/* Seed */}
             <div className="mb-6 flex items-center gap-3">
-              <label className="text-sm font-bold text-slate-500 uppercase tracking-wider">Seed:</label>
+              <label htmlFor="seed-input" className="text-sm font-bold text-slate-500 uppercase tracking-wider">Seed:</label>
               <input
+                id="seed-input"
                 type="number"
                 value={setupConfig.seed}
                 onChange={(e) => setSetupConfig(prev => ({ ...prev, seed: parseInt(e.target.value) || 0 }))}
@@ -626,7 +627,9 @@ const App: React.FC = () => {
               />
               <button
                 onClick={() => setSetupConfig(prev => ({ ...prev, seed: generateSeed() }))}
-                className="px-3 py-2 bg-slate-200 rounded-lg hover:bg-slate-300 font-bold text-slate-600"
+                className="px-3 py-2 bg-slate-200 rounded-lg hover:bg-slate-300 font-bold text-slate-600 focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:outline-none"
+                aria-label="Generate random seed"
+                title="Generate random seed"
               >
                 🎲
               </button>

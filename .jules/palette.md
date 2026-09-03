@@ -1,0 +1,3 @@
+## 2024-05-24 - Accessibility on Setup Screen Inputs and Icon-Buttons
+**Learning:** Found that custom inputs (like the Seed generator) often lack proper label association (`htmlFor` -> `id`) which is critical for screen readers, and that icon-only buttons (like 🎲) are completely invisible to screen readers without `aria-label`, and lack visual keyboard focus indicators without `focus-visible` styles.
+**Action:** Always ensure that every `<label>` has an `htmlFor` matching its `<input id>`, and that every icon-only button is explicitly labeled with `aria-label` and `title` and receives clear `focus-visible` styling for keyboard navigation.
