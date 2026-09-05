@@ -1,0 +1,3 @@
+## 2025-03-09 - Adding a11y support to Game UI elements
+**Learning:** Custom interactive elements in games (like HUD controls and UI overlays) often omit standard accessibility features. In the `metro-mini` codebase, elements like speed toggles, mode switches, and dynamic upgrade cards relied solely on visual cues and lacked screen reader descriptions, focus indicators, and state tracking.
+**Action:** When building or enhancing game UIs or custom controls, consistently apply `aria-label`, `aria-pressed`, and `role="group"` as well as robust keyboard focus states (`focus-visible` in Tailwind). Always test these controls to ensure they are accessible via keyboard and provide meaningful context to assistive technologies.
