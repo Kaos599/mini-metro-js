@@ -53,16 +53,22 @@ export const GameUI: React.FC<GameUIProps> = ({
                 </div>
 
                 {/* Speed Controls */}
-                <div className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1">
+                <div
+                    className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1"
+                    role="group"
+                    aria-label="Game speed controls"
+                >
                     {[0, 1, 2, 5, 20].map((s) => (
                         <button 
                             key={s}
                             onClick={() => onSetSpeed(s)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                            aria-label={s === 0 ? "Pause game" : `Set speed to ${s}x`}
+                            aria-pressed={speed === s}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
                                 speed === s ? 'bg-slate-800 text-white scale-110 shadow' : 'text-slate-500 hover:bg-slate-100'
                             }`}
                         >
-                            {s === 0 ? '||' : `${s}x`}
+                            <span aria-hidden="true">{s === 0 ? '||' : `${s}x`}</span>
                         </button>
                     ))}
                 </div>
@@ -76,7 +82,9 @@ export const GameUI: React.FC<GameUIProps> = ({
                 {/* Pan Mode Toggle */}
                 <button
                     onClick={onTogglePanMode}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+                    aria-label="Toggle pan mode"
+                    aria-pressed={isPanMode}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
                         isPanMode 
                             ? 'bg-blue-600 text-white shadow-lg' 
                             : 'bg-white/90 text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -116,7 +124,9 @@ export const GameUI: React.FC<GameUIProps> = ({
                             <button
                                 key={line.id}
                                 onClick={() => onSelectLine(selectedLineId === line.id ? null : line.id)}
-                                className={`w-10 h-10 rounded-full border-4 transition-all flex items-center justify-center relative group ${
+                                aria-label={`Select line ${line.id}`}
+                                aria-pressed={selectedLineId === line.id}
+                                className={`w-10 h-10 rounded-full border-4 transition-all flex items-center justify-center relative group focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none ${
                                     selectedLineId === line.id ? 'scale-110 shadow-lg ring-2 ring-offset-2 ring-slate-300 opacity-100' : (selectedLineId ? 'opacity-30 hover:opacity-100 hover:scale-105' : 'opacity-100 hover:scale-105')
                                 }`}
                                 style={{ backgroundColor: line.color, borderColor: 'white' }}
@@ -144,7 +154,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                                     }}
                                     onMouseEnter={() => setHoveredSlot(i)}
                                     onMouseLeave={() => setHoveredSlot(null)}
-                                    className={`w-10 h-10 rounded-full border-2 transition-all duration-200 flex items-center justify-center relative group
+                                    aria-label="Create new line"
+                                    className={`w-10 h-10 rounded-full border-2 transition-all duration-200 flex items-center justify-center relative group focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none
                                         ${isActiveSlot 
                                             ? 'scale-110 shadow-lg ring-2 ring-offset-2 ring-slate-300 border-solid' 
                                             : isHovered 
@@ -228,7 +239,12 @@ export const GameUI: React.FC<GameUIProps> = ({
                         <p className="mb-8 text-slate-600">
                             Final Score: <span className="text-2xl font-bold text-blue-600">{gameState.score}</span>
                         </p>
-                        <button onClick={onReset} className="bg-slate-900 text-white px-8 py-4 rounded-full font-bold hover:bg-slate-700">Play Again</button>
+                        <button
+                            onClick={onReset}
+                            className="bg-slate-900 text-white px-8 py-4 rounded-full font-bold hover:bg-slate-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none focus-visible:ring-offset-2"
+                        >
+                            Play Again
+                        </button>
                     </div>
                 </div>
             )}
@@ -262,8 +278,12 @@ const AssetRow = ({ label, available, color }: any) => (
 );
 
 const UpgradeCard = ({ onClick, title, icon }: any) => (
-    <button onClick={onClick} className="bg-slate-50 border-2 border-slate-200 p-4 rounded-xl hover:border-blue-500 hover:bg-white hover:shadow-lg transition-all flex flex-col items-center">
-        <div className="text-3xl mb-3">{icon}</div>
+    <button
+        onClick={onClick}
+        aria-label={`Select upgrade: ${title}`}
+        className="bg-slate-50 border-2 border-slate-200 p-4 rounded-xl hover:border-blue-500 hover:bg-white hover:shadow-lg transition-all flex flex-col items-center focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none"
+    >
+        <div className="text-3xl mb-3" aria-hidden="true">{icon}</div>
         <span className="font-bold text-sm text-slate-800">{title}</span>
     </button>
 );
