@@ -30,10 +30,19 @@ export class Renderer {
     };
   }
 
+  // Cache to store the results of the expensive lineIntersectsPolygon checks
+  private tunnelCache: Map<string, boolean> = new Map();
+
   render(state: GameState, interaction: InteractionState, alpha: number) {
     const { ctx, width, height } = this;
     const camera = state.camera;
     
+    // Build a station map for O(1) lookups during rendering
+    const stationMap = new Map<string, Station>();
+    for (const station of state.stations) {
+      stationMap.set(station.id, station);
+    }
+
     // Clear (in screen space, before camera transform)
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, width, height);
@@ -70,14 +79,21 @@ export class Renderer {
       }
 
       ctx.strokeStyle = line.color;
-      const stations = line.stationIds.map(id => state.stations.find(s => s.id === id)).filter(Boolean) as Station[];
+      const stations = line.stationIds.map(id => stationMap.get(id)).filter(Boolean) as Station[];
       
       if (stations.length > 0) {
           // Draw each segment, checking for water crossings (tunnels)
           for (let i = 0; i < stations.length - 1; i++) {
               const s1 = stations[i];
               const s2 = stations[i + 1];
-              const isTunnel = state.water.some(poly => lineIntersectsPolygon(s1.pos, s2.pos, poly));
+
+              // Memoize tunnel check
+              const segmentId = s1.id < s2.id ? `${s1.id}-${s2.id}` : `${s2.id}-${s1.id}`;
+              let isTunnel = this.tunnelCache.get(segmentId);
+              if (isTunnel === undefined) {
+                  isTunnel = state.water.some(poly => lineIntersectsPolygon(s1.pos, s2.pos, poly));
+                  this.tunnelCache.set(segmentId, isTunnel);
+              }
               
               ctx.beginPath();
               ctx.moveTo(s1.pos.x, s1.pos.y);
@@ -105,7 +121,7 @@ export class Renderer {
 
     // 3. Interaction Ghost Line (need to convert drag position to world coords)
     if (interaction.isDragging && interaction.dragStartStationId && interaction.dragCurrentPos) {
-        const startStation = state.stations.find(s => s.id === interaction.dragStartStationId);
+        const startStation = stationMap.get(interaction.dragStartStationId);
         if (startStation) {
             // dragCurrentPos is in world coordinates (converted in App.tsx)
             const ghostColor = interaction.activeLineId 
@@ -134,7 +150,7 @@ export class Renderer {
         }
 
         line.trains.forEach(train => {
-            this.drawTrain(ctx, train, line, state.stations, alpha);
+            this.drawTrain(ctx, train, line, stationMap, alpha);
         });
     });
     ctx.globalAlpha = 1.0;
@@ -205,15 +221,15 @@ export class Renderer {
     });
   }
 
-  private drawTrain(ctx: CanvasRenderingContext2D, train: Train, line: Line, stations: Station[], alpha: number) {
+  private drawTrain(ctx: CanvasRenderingContext2D, train: Train, line: Line, stationMap: Map<string, Station>, alpha: number) {
       // INTERPOLATION LOGIC
       // We need to lerp between (prevSegmentIndex, prevT) and (segmentIndex, t)
       
       const getPos = (segIdx: number, tVal: number) => {
           const i = Math.floor(segIdx);
           if (i >= line.stationIds.length - 1) return null;
-          const s1 = stations.find(s => s.id === line.stationIds[i]);
-          const s2 = stations.find(s => s.id === line.stationIds[i+1]);
+          const s1 = stationMap.get(line.stationIds[i]);
+          const s2 = stationMap.get(line.stationIds[i+1]);
           if (!s1 || !s2) return null;
           return lerp(s1.pos, s2.pos, tVal);
       };
@@ -236,8 +252,8 @@ export class Renderer {
       // MVP: Use current segment angle.
       const i = Math.floor(train.segmentIndex);
       if (i < line.stationIds.length - 1) {
-          const s1 = stations.find(s => s.id === line.stationIds[i]);
-          const s2 = stations.find(s => s.id === line.stationIds[i+1]);
+          const s1 = stationMap.get(line.stationIds[i]);
+          const s2 = stationMap.get(line.stationIds[i+1]);
           if (s1 && s2) {
              const angle = Math.atan2(s2.pos.y - s1.pos.y, s2.pos.x - s1.pos.x);
              ctx.rotate(angle);
