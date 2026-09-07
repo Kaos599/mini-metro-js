@@ -1,7 +1,17 @@
 import { Point } from '../types';
 
+// ⚡ Bolt: Added distSq helper to avoid Math.sqrt when only comparing relative distances or for distToSegment
+export const distSq = (p1: Point, p2: Point): number => {
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  return dx * dx + dy * dy;
+};
+
+// ⚡ Bolt: Optimized dist to use simple multiplication (dx*dx) instead of slower Math.pow
 export const dist = (p1: Point, p2: Point): number => {
-  return Math.sqrt(Math.pow(p2.x - p1.x, 2) + Math.pow(p2.y - p1.y, 2));
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  return Math.sqrt(dx * dx + dy * dy);
 };
 
 export const lerp = (p1: Point, p2: Point, t: number): Point => {
@@ -46,7 +56,8 @@ export const isPointInPolygon = (p: Point, polygon: Point[]): boolean => {
 };
 
 export const distToSegment = (p: Point, v: Point, w: Point): number => {
-  const l2 = dist(v, w) * dist(v, w);
+  // ⚡ Bolt: Replaced double dist() call with a single distSq() to eliminate redundant square roots and Math.pow overhead
+  const l2 = distSq(v, w);
   if (l2 === 0) return dist(p, v);
   let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
   t = Math.max(0, Math.min(1, t));

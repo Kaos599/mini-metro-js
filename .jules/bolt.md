@@ -1,0 +1,3 @@
+## 2024-06-25 - Avoid Math.pow in hot loops
+**Learning:** `Math.pow` can be surprisingly slow in JavaScript compared to simple multiplication for small powers. The `dist` function is called hundreds of thousands of times during interaction (drag interactions checking distance against every station) and UI updates. Also, calling `dist(v,w) * dist(v,w)` computes a square root only to immediately square it again, which is wasteful.
+**Action:** Use simple multiplication `dx * dx + dy * dy` instead of `Math.pow` for distance calculations, and introduce `distSq` where absolute distance is not needed or where the squared distance is used directly (like in segment distance calculations).
