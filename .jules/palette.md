@@ -1,0 +1,3 @@
+## 2025-03-08 - Accessible Custom UI Controls
+**Learning:** Adding semantic roles (`role="group"`) and accessible states (`aria-pressed`) is critical when using plain `div` and `button` elements as toggleable UI controls (like game speed selectors). This ensures screen readers announce the group context and the current state of toggle buttons properly. It is also important to implement visual focus indicators (`focus-visible:outline-none focus-visible:ring-2`) to support keyboard navigation.
+**Action:** Always include semantic grouping, `aria-pressed`, and clear keyboard focus states when building interactive UI controls (such as toggles, mode switches, and playback settings) to provide a robust and accessible experience for all users.
