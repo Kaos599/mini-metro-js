@@ -53,12 +53,14 @@ export const GameUI: React.FC<GameUIProps> = ({
                 </div>
 
                 {/* Speed Controls */}
-                <div className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1">
+                <div className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1" role="group" aria-label="Speed controls">
                     {[0, 1, 2, 5, 20].map((s) => (
                         <button 
                             key={s}
                             onClick={() => onSetSpeed(s)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                            aria-label={s === 0 ? 'Pause game' : `Set speed to ${s}x`}
+                            aria-pressed={speed === s}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                                 speed === s ? 'bg-slate-800 text-white scale-110 shadow' : 'text-slate-500 hover:bg-slate-100'
                             }`}
                         >
@@ -76,7 +78,9 @@ export const GameUI: React.FC<GameUIProps> = ({
                 {/* Pan Mode Toggle */}
                 <button
                     onClick={onTogglePanMode}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+                    aria-pressed={isPanMode}
+                    aria-label="Toggle pan mode"
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                         isPanMode 
                             ? 'bg-blue-600 text-white shadow-lg' 
                             : 'bg-white/90 text-slate-600 hover:bg-slate-100 border border-slate-200'
@@ -190,9 +194,13 @@ export const GameUI: React.FC<GameUIProps> = ({
                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assets</span>
                     <div className="flex gap-4">
                         <div 
-                            className="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing"
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Drag to add Train"
+                            className="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                             onMouseDown={() => onDragAssetStart(AssetType.LOCOMOTIVE)}
                             onTouchStart={() => onDragAssetStart(AssetType.LOCOMOTIVE)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onDragAssetStart(AssetType.LOCOMOTIVE); }}
                         >
                             <div className="w-12 h-12 bg-slate-100 rounded-xl border-2 border-slate-200 flex items-center justify-center text-2xl hover:border-blue-400 hover:bg-white transition-colors relative">
                                 🚄
@@ -204,9 +212,13 @@ export const GameUI: React.FC<GameUIProps> = ({
                         </div>
 
                         <div 
-                            className="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing"
+                            role="button"
+                            tabIndex={0}
+                            aria-label="Drag to add Carriage"
+                            className="flex flex-col items-center gap-1 cursor-grab active:cursor-grabbing focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
                             onMouseDown={() => onDragAssetStart(AssetType.CARRIAGE)}
                             onTouchStart={() => onDragAssetStart(AssetType.CARRIAGE)}
+                            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') onDragAssetStart(AssetType.CARRIAGE); }}
                         >
                             <div className="w-12 h-12 bg-slate-100 rounded-xl border-2 border-slate-200 flex items-center justify-center text-2xl hover:border-purple-400 hover:bg-white transition-colors relative">
                                 🚃
