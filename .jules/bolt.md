@@ -1,0 +1,3 @@
+## 2025-03-08 - [Optimize Geometry Functions]
+**Learning:** The closure created inside the `linesIntersect` function (`const ccw = ...`) was causing significant performance overhead because it was instantiated thousands of times during `lineIntersectsPolygon` in the hot render loop. `Math.pow` inside distance checks and generating temporary Point objects for `distToSegment` also accumulated overhead.
+**Action:** When implementing heavy geometry math that runs inside a rendering or simulation loop, inline computations to avoid memory allocation, closure scope creation, and heavy standard library methods like `Math.pow`.
