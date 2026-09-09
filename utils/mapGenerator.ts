@@ -287,11 +287,11 @@ function isPointInPolygon(point: Point, polygon: Point[]): boolean {
   return inside;
 }
 
-// Distance between two points
-function dist(a: Point, b: Point): number {
+// Distance squared between two points (faster comparison)
+function distSq(a: Point, b: Point): number {
   const dx = a.x - b.x;
   const dy = a.y - b.y;
-  return Math.sqrt(dx * dx + dy * dy);
+  return dx * dx + dy * dy;
 }
 
 // Place initial stations with balanced distribution
@@ -324,7 +324,7 @@ function placeInitialStations(
     // Check distance from other stations
     let tooClose = false;
     for (const existing of stations) {
-      if (dist(pos, existing.pos) < minDistance) {
+      if (distSq(pos, existing.pos) < minDistance * minDistance) {
         tooClose = true;
         break;
       }

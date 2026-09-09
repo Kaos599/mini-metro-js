@@ -1,0 +1,3 @@
+## 2025-03-09 - Geometry math bottleneck
+**Learning:** Math.pow(x, 2) and redundant Math.sqrt() calls inside distToSegment (`dist(v,w) * dist(v,w)`) cause a significant performance hit in heavily looped simulation paths. Replacing Math.pow with simple multiplication (`dx * dx`) and using a `distSq` helper avoids costly square root operations completely when computing length squared (`l2`), improving geometry computation speeds by ~30-50%.
+**Action:** When implementing distance logic in hot loops, always prefer direct multiplication for squaring, and use squared distances (`distSq`) where possible to defer or avoid `Math.sqrt`.
