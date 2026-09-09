@@ -53,12 +53,18 @@ export const GameUI: React.FC<GameUIProps> = ({
                 </div>
 
                 {/* Speed Controls */}
-                <div className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1">
+                <div
+                    role="group"
+                    aria-label="Game speed controls"
+                    className="flex bg-white/90 backdrop-blur rounded-full shadow-lg border border-slate-100 p-1 gap-1"
+                >
                     {[0, 1, 2, 5, 20].map((s) => (
                         <button 
                             key={s}
                             onClick={() => onSetSpeed(s)}
-                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
+                            aria-label={s === 0 ? 'Pause' : `${s}x speed`}
+                            aria-pressed={speed === s}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1 ${
                                 speed === s ? 'bg-slate-800 text-white scale-110 shadow' : 'text-slate-500 hover:bg-slate-100'
                             }`}
                         >
@@ -76,7 +82,8 @@ export const GameUI: React.FC<GameUIProps> = ({
                 {/* Pan Mode Toggle */}
                 <button
                     onClick={onTogglePanMode}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all ${
+                    aria-pressed={isPanMode}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 ${
                         isPanMode 
                             ? 'bg-blue-600 text-white shadow-lg' 
                             : 'bg-white/90 text-slate-600 hover:bg-slate-100 border border-slate-200'
