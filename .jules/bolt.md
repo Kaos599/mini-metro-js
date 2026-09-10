@@ -1,0 +1,3 @@
+## 2025-03-08 - [Pathfinding Optimization]
+**Learning:** Using `Array.prototype.shift()` in BFS queues introduces O(N) overhead per pop, leading to O(N^2) overall time. Replacing it with an index pointer removes this bottleneck. Additionally, precomputing an adjacency list prevents O(V*E) repeated work when popping nodes in pathfinding algorithms.
+**Action:** When implementing pathfinding or other queue-heavy algorithms in JavaScript/TypeScript, always use an index pointer (e.g. `let qIdx = 0; queue[qIdx++]`) rather than `.shift()`, and always precompute adjacency lists if the graph structure doesn't change during the traversal.
