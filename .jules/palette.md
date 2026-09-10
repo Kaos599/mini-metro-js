@@ -1,0 +1,3 @@
+## 2024-03-05 - Custom UI Controls Require Explicit ARIA States
+**Learning:** Custom UI components built with basic HTML elements (like `<div>` containers for related buttons) often lack built-in accessibility semantics. A group of custom speed control buttons was missing a unifying group role, aria-labels for icon-like buttons ('||'), and state indicators (`aria-pressed`).
+**Action:** When implementing custom control groups, always wrap them in a `role="group"` with a descriptive `aria-label`, ensure each control has a meaningful `aria-label`/`title`, manage state with `aria-pressed`/`aria-expanded`, and include clear `focus-visible` styling for keyboard navigation.
